@@ -1,0 +1,21 @@
+{
+  "name": "bitcoincash-oauth-client",
+  "version": "1.0.0",
+  "description": "Client-side library for Bitcoin Cash OAuth authentication using libauth",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "@bitauth/libauth": "^1.19.1"
+  },
+  "keywords": [
+    "bitcoin-cash",
+    "oauth",
+    "ecdsa",
+    "authentication",
+    "libauth"
+  ],
+  "license": "MIT"
+}
