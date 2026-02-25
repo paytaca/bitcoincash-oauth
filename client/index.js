@@ -5,6 +5,7 @@
 
 import { instantiateSecp256k1, generatePrivateKey } from "@bitauth/libauth";
 import { randomBytes } from "crypto";
+import { encodeCashAddress, CashAddressNetworkPrefix, CashAddressType, CashAddressEncodingError } from "@bitauth/libauth";
 
 class BitcoinCashOAuthClient {
   constructor(options = {}) {
@@ -51,28 +52,29 @@ class BitcoinCashOAuthClient {
   }
 
   /**
-   * Convert public key to Bitcoin Cash address
+   * Convert public key to Bitcoin Cash CashAddr format
    * @param {Uint8Array} publicKey - Compressed public key
-   * @returns {string} Bitcoin Cash address
+   * @returns {string} Bitcoin Cash CashAddr address (e.g., bitcoincash:qz...)
    */
   async publicKeyToCashAddress(publicKey) {
     // Hash public key: RIPEMD160(SHA256(publicKey))
     const sha256Hash = await this.sha256(publicKey);
     const ripemd160Hash = await this.ripemd160(sha256Hash);
     
-    // Create versioned hash (version byte + hash)
-    const versionByte = this.network === "mainnet" ? 0x00 : 0x6f;
-    const versionedHash = new Uint8Array([versionByte, ...ripemd160Hash]);
+    // Determine network prefix
+    const prefix = this.network === "mainnet" 
+      ? CashAddressNetworkPrefix.mainnet 
+      : CashAddressNetworkPrefix.testnet;
     
-    // Double SHA256 for checksum
-    const checksumFull = await this.sha256(await this.sha256(versionedHash));
-    const checksum = checksumFull.slice(0, 4);
+    // Encode as CashAddr (P2PKH type, 160-bit hash)
+    const address = encodeCashAddress(prefix, CashAddressType.P2PKH, ripemd160Hash);
     
-    // Combine
-    const binaryAddress = new Uint8Array([...versionedHash, ...checksum]);
+    // Check for errors
+    if (address === CashAddressEncodingError.unsupportedHashLength) {
+      throw new Error("Failed to encode CashAddress: unsupported hash length");
+    }
     
-    // Encode to Base58
-    return this.encodeBase58(binaryAddress);
+    return address;
   }
 
   /**

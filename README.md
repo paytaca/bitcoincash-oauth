@@ -12,6 +12,18 @@ The authentication flow works as follows:
 4. **Token Issuance**: Upon successful validation, server issues OAuth2 access and refresh tokens
 5. **API Access**: Client uses the access token for authenticated requests
 
+### CashAddr Format
+
+This library uses the **CashAddr format** (bitcoincash:qz...) for all Bitcoin Cash addresses, which is the modern, preferred format for Bitcoin Cash. This provides:
+
+- **Better user experience**: Distinct from legacy Bitcoin addresses, preventing accidental cross-chain transfers
+- **Error detection**: Built-in checksum for typo detection
+- **Network identification**: Clear prefix shows if it's mainnet (`bitcoincash:`), testnet (`bchtest:`), or regtest (`bchreg:`)
+
+**Example addresses:**
+- Mainnet: `bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5`
+- Testnet: `bchtest:qqrxvhnn88gmpczyxry254vcsnl6canmkqvepqak5g`
+
 ## Project Structure
 
 ```
@@ -58,7 +70,7 @@ Register a new user with a Bitcoin Cash address.
 **Request:**
 ```json
 {
-  "address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+  "address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
   "user_id": "optional_custom_id"
 }
 ```
@@ -67,7 +79,7 @@ Register a new user with a Bitcoin Cash address.
 ```json
 {
   "user_id": "user_abc123",
-  "address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+  "address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
   "message": "User registered successfully"
 }
 ```
@@ -209,7 +221,7 @@ is_valid, reason = verify_bitcoin_cash_auth(
     timestamp=1234567890,
     public_key="0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",
     signature="3045022100...",
-    expected_address="1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+    expected_address="bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5"
 )
 
 if is_valid:
@@ -223,13 +235,13 @@ else:
 ```python
 from validator import BitcoinCashValidator
 
-# Validate Bitcoin Cash address
-is_valid, network = BitcoinCashValidator.validate_address(
-    "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+# Validate Bitcoin Cash CashAddr format
+is_valid, network = BitcoinCashValidator.validate_cash_address(
+    "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5"
 )
 
-# Convert public key to address
-address = BitcoinCashValidator.public_key_to_address(
+# Convert public key to CashAddr
+address = BitcoinCashValidator.public_key_to_cash_address(
     bytes.fromhex("0279BE..."),
     network="mainnet"
 )
