@@ -1,0 +1,2 @@
+include README.md
+recursive-include bitcoincash_oauth_django *.py
