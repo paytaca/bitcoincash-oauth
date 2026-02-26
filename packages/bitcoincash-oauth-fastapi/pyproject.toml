@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bitcoincash-oauth-fastapi"
-version = "1.0.0"
+version = "0.1.0"
 description = "Bitcoin Cash OAuth authentication for FastAPI"
 readme = "README.md"
 license = {text = "MIT"}
@@ -44,10 +44,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/bitcoincash-oauth"
-Documentation = "https://github.com/yourusername/bitcoincash-oauth#readme"
-Repository = "https://github.com/yourusername/bitcoincash-oauth.git"
-Issues = "https://github.com/yourusername/bitcoincash-oauth/issues"
+Homepage = "https://github.com/paytaca/bitcoincash-oauth"
+Documentation = "https://github.com/paytaca/bitcoincash-oauth#readme"
+Repository = "https://github.com/paytaca/bitcoincash-oauth.git"
+Issues = "https://github.com/paytaca/bitcoincash-oauth/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["bitcoincash_oauth_fastapi"]

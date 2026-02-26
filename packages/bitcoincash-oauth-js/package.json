@@ -1,6 +1,10 @@
 {
   "name": "bitcoincash-oauth-client",
-  "version": "1.0.0",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/paytaca/bitcoincash-oauth.git"
+  },
   "description": "Universal JavaScript client library for Bitcoin Cash OAuth authentication - works in both browser and Node.js environments",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",

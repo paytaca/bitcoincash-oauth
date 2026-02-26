@@ -1,6 +1,10 @@
 {
   "name": "bitcoincash-oauth-client",
-  "version": "1.0.0",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/paytaca/bitcoincash-oauth.git"
+  },
   "description": "Client-side library for Bitcoin Cash OAuth authentication using libauth",
   "main": "index.js",
   "type": "module",
