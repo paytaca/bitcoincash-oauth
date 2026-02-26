@@ -67,8 +67,17 @@ async function runTests() {
     console.log('\nTest 3: Create and sign auth message...');
     const userId = 'user_12345';
     const timestamp = Math.floor(Date.now() / 1000);
-    const message = client.createAuthMessage(userId, timestamp);
+    const domain = 'test.example.com';
+    const message = client.createAuthMessage(userId, timestamp, domain);
     console.log('  ✓ Message:', message);
+    
+    // Verify message format
+    const parts = message.split('|');
+    if (parts.length === 4 && parts[0] === 'bitcoincash-oauth' && parts[2] === userId) {
+      console.log('  ✓ Message format is correct (protocol|domain|userId|timestamp)');
+    } else {
+      throw new Error('Invalid message format');
+    }
     
     const signature = await client.signAuthMessage(message, keypair.privateKey);
     console.log('  ✓ Signature:', signature.substring(0, 40) + '...');

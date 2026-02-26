@@ -37,8 +37,10 @@ async function testClient() {
     console.log("\n2. Creating and signing auth message...");
     const userId = "user_12345";
     const timestamp = Math.floor(Date.now() / 1000);
-    const message = client.createAuthMessage(userId, timestamp);
+    const domain = "localhost"; // Will default to window.location.host in browser
+    const message = client.createAuthMessage(userId, timestamp, domain);
     console.log("   ✓ Message:", message);
+    console.log("   ✓ Format: protocol|domain|userId|timestamp");
 
     const signature = await client.signAuthMessage(message, keypair.privateKey);
     console.log("   ✓ Signature:", signature.substring(0, 40) + "...");

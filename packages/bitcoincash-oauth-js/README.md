@@ -136,20 +136,28 @@ const result = await client.register('bitcoincash:qz...', 'optional-user-id');
 console.log(result.user_id);
 ```
 
-#### `authenticate(userId, privateKey, publicKey, timestamp?)`
+#### `authenticate(userId, privateKey, publicKey, timestamp?, domain?)`
 Authenticate with the server using ECDSA signature.
 
 ```javascript
 const auth = await client.authenticate(
   userId,
   privateKeyHex,
-  publicKeyHex
+  publicKeyHex,
+  null,  // Optional: custom timestamp
+  'app.example.com'  // Optional: domain for message binding (defaults to window.location.host)
 );
 
 console.log(auth.access_token);
 console.log(auth.refresh_token);
 console.log(auth.expires_in);
 ```
+
+**Message Format:** The signed message uses the format `bitcoincash-oauth|domain|userId|timestamp`:
+- `bitcoincash-oauth`: Protocol identifier (prevents cross-protocol replay)
+- `domain`: Domain/host binding (prevents phishing, defaults to current host)
+- `userId`: User's unique identifier
+- `timestamp`: Unix timestamp for replay protection
 
 #### `authenticatedRequest(endpoint, options?)`
 Make an authenticated HTTP request.
@@ -182,19 +190,29 @@ Get the currently stored token from secure storage.
 const token = client.getToken();
 ```
 
-#### `createAuthMessage(userId, timestamp?)`
+#### `createAuthMessage(userId, timestamp?, domain?)`
 Create the authentication message format used for signing.
 
 ```javascript
-const message = client.createAuthMessage('user_123', 1234567890);
-// Returns: "user_123,1234567890"
+const message = client.createAuthMessage('user_123', 1234567890, 'app.example.com');
+// Returns: "bitcoincash-oauth|app.example.com|user_123|1234567890"
 ```
+
+**Parameters:**
+- `userId` (string): The user's unique identifier
+- `timestamp` (number, optional): Unix timestamp (defaults to current time)
+- `domain` (string, optional): Domain for message binding (defaults to `window.location.host` or 'oauth')
+
+**Returns:** Message string in format `bitcoincash-oauth|domain|userId|timestamp`
 
 #### `signAuthMessage(message, privateKeyHex)`
 Sign an authentication message with a private key.
 
 ```javascript
-const signature = await client.signAuthMessage('user_123,1234567890', privateKeyHex);
+const message = client.createAuthMessage('user_123', 1234567890, 'app.example.com');
+// Returns: "bitcoincash-oauth|app.example.com|user_123|1234567890"
+
+const signature = await client.signAuthMessage(message, privateKeyHex);
 ```
 
 ## Storage Interface

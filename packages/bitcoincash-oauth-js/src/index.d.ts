@@ -62,8 +62,8 @@ export class BitcoinCashOAuthClient {
   /** Register a new user with the server */
   register(address: string, userId?: string | null): Promise<RegistrationResult>;
   
-  /** Create authentication message (userId,timestamp) */
-  createAuthMessage(userId: string, timestamp?: number | null): string;
+  /** Create authentication message (protocol|domain|userId|timestamp) */
+  createAuthMessage(userId: string, timestamp?: number | null, domain?: string | null): string;
   
   /** Sign authentication message with private key */
   signAuthMessage(message: string, privateKeyHex: string): Promise<string>;
@@ -73,7 +73,8 @@ export class BitcoinCashOAuthClient {
     userId: string,
     privateKeyHex: string,
     publicKeyHex: string,
-    timestamp?: number | null
+    timestamp?: number | null,
+    domain?: string | null
   ): Promise<AuthenticationResult>;
   
   /** Get stored token */

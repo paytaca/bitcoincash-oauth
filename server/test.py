@@ -132,9 +132,10 @@ def test_authentication_flow():
     print(f"   Expected address: {address}")
 
     # In a real scenario, the client would:
-    # 1. Create message: f"{user_id},{timestamp}"
+    # 1. Create message: f"bitcoincash-oauth|{domain}|{user_id}|{timestamp}"
     # 2. Sign with private key
     # 3. Send public key and signature to server
+    # Message format: protocol|domain|userId|timestamp (prevents cross-protocol replay)
 
     print("\n   Note: Real signature verification requires client-generated signatures")
     print("   This test demonstrates the flow structure.")

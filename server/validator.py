@@ -121,6 +121,7 @@ class BitcoinCashValidator:
         public_key_hex: str,
         signature_hex: str,
         expected_address: str,
+        domain: str = "oauth",
         max_timestamp_diff: int = 300,  # 5 minutes
     ) -> Tuple[bool, str]:
         """
@@ -132,6 +133,7 @@ class BitcoinCashValidator:
             public_key_hex: Hex-encoded public key
             signature_hex: DER-encoded signature in hex
             expected_address: Expected Bitcoin Cash CashAddr address for this user
+            domain: Domain/host for message binding (prevents phishing)
             max_timestamp_diff: Maximum allowed time difference in seconds
 
         Returns:
@@ -157,8 +159,8 @@ class BitcoinCashValidator:
         # Default to mainnet if network is None
         network = network or "mainnet"
 
-        # Reconstruct the message that was signed
-        message = f"{user_id},{timestamp}"
+        # Reconstruct the message that was signed (protocol|domain|userId|timestamp)
+        message = f"bitcoincash-oauth|{domain}|{user_id}|{timestamp}"
 
         # Convert public key to CashAddr
         try:
@@ -183,7 +185,12 @@ class BitcoinCashValidator:
 
 # Convenience functions
 def verify_bitcoin_cash_auth(
-    user_id: str, timestamp: int, public_key: str, signature: str, expected_address: str
+    user_id: str,
+    timestamp: int,
+    public_key: str,
+    signature: str,
+    expected_address: str,
+    domain: str = "oauth",
 ) -> Tuple[bool, str]:
     """
     Convenience function for one-shot authentication verification
@@ -194,11 +201,12 @@ def verify_bitcoin_cash_auth(
             timestamp=1234567890,
             public_key="03...",
             signature="3045...",
-            expected_address="bitcoincash:qz7f..."
+            expected_address="bitcoincash:qz7f...",
+            domain="app.example.com"
         )
     """
     return BitcoinCashValidator.authenticate_user(
-        user_id, timestamp, public_key, signature, expected_address
+        user_id, timestamp, public_key, signature, expected_address, domain
     )
 
 

@@ -7,10 +7,16 @@ OAuth2 authentication library using Bitcoin Cash ECDSA signatures for identity v
 The authentication flow works as follows:
 
 1. **Registration**: Client generates a Bitcoin Cash address and registers it with the server
-2. **Authentication**: Client signs a message containing their user ID and timestamp, then sends the signature, public key, and other data to the server
+2. **Authentication**: Client signs a message containing `protocol|domain|userId|timestamp`, then sends the signature, public key, and other data to the server
 3. **Verification**: Server validates the ECDSA signature and converts the public key to a Bitcoin Cash address to verify it matches the registered address
 4. **Token Issuance**: Upon successful validation, server issues OAuth2 access and refresh tokens
 5. **API Access**: Client uses the access token for authenticated requests
+
+**Message Format:** The signed message uses the format `bitcoincash-oauth|domain|userId|timestamp` where:
+- `bitcoincash-oauth`: Protocol identifier (prevents cross-protocol replay attacks)
+- `domain`: The domain/host of the application (prevents phishing across different domains)
+- `userId`: The user's unique identifier
+- `timestamp`: Unix timestamp for replay attack protection
 
 ### CashAddr Format
 
@@ -197,9 +203,11 @@ const data = await response.json();
 ```javascript
 const userId = "user_123";
 const timestamp = Math.floor(Date.now() / 1000);
+const domain = window.location.host; // Or specify manually
 
-// Create message
-const message = client.createAuthMessage(userId, timestamp);
+// Create message (format: protocol|domain|userId|timestamp)
+const message = client.createAuthMessage(userId, timestamp, domain);
+// Returns: "bitcoincash-oauth|app.example.com|user_123|1699999999"
 
 // Sign message
 const signature = await client.signAuthMessage(
@@ -221,13 +229,15 @@ is_valid, reason = verify_bitcoin_cash_auth(
     timestamp=1234567890,
     public_key="0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",
     signature="3045022100...",
-    expected_address="bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5"
+    expected_address="bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
+    domain="app.example.com"  # Optional: prevents phishing across domains
 )
 
 if is_valid:
     print("Authentication successful")
 else:
     print(f"Authentication failed: {reason}")
+```
 ```
 
 ### Address Validation
@@ -249,13 +259,15 @@ address = BitcoinCashValidator.public_key_to_cash_address(
 
 ## Security Considerations
 
-1. **Timestamp Validation**: The server rejects requests with timestamps older than 5 minutes (configurable) to prevent replay attacks
-2. **Signature Verification**: All signatures are verified using secp256k1 curve
-3. **Address Verification**: Public keys are converted to addresses and verified against registered addresses
-4. **Token Expiration**: Access tokens expire after 1 hour by default
-5. **Token Revocation**: Tokens can be revoked and are stored in a revocation list
-6. **Storage**: In production, use Redis or a database instead of in-memory storage
-7. **HTTPS**: Always use HTTPS in production
+1. **Domain Binding**: Messages include the domain/host to prevent phishing attacks - signatures from `app-a.com` won't work on `app-b.com`
+2. **Protocol Prefix**: The `bitcoincash-oauth` prefix prevents signature reuse across different authentication protocols
+3. **Timestamp Validation**: The server rejects requests with timestamps older than 5 minutes (configurable) to prevent replay attacks
+4. **Signature Verification**: All signatures are verified using secp256k1 curve
+5. **Address Verification**: Public keys are converted to addresses and verified against registered addresses
+6. **Token Expiration**: Access tokens expire after 1 hour by default
+7. **Token Revocation**: Tokens can be revoked and are stored in a revocation list
+8. **Storage**: In production, use Redis or a database instead of in-memory storage
+9. **HTTPS**: Always use HTTPS in production
 
 ## Testing
 

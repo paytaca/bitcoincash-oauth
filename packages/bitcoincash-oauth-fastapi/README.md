@@ -64,7 +64,7 @@ Register a new user with a Bitcoin Cash address.
 
 ### POST `/auth/token`
 
-Obtain an OAuth token using Bitcoin Cash signature.
+Obtain an OAuth token using Bitcoin Cash signature. The client must sign the message in the format `bitcoincash-oauth|domain|userId|timestamp`.
 
 **Request:**
 ```json
@@ -76,6 +76,12 @@ Obtain an OAuth token using Bitcoin Cash signature.
   "scopes": ["read", "write"]
 }
 ```
+
+**Message Format:** `bitcoincash-oauth|domain|userId|timestamp`
+- `bitcoincash-oauth`: Protocol identifier (prevents cross-protocol replay)
+- `domain`: Domain/host of the application (prevents phishing)
+- `userId`: User's unique identifier  
+- `timestamp`: Unix timestamp for replay protection
 
 **Response:**
 ```json
@@ -148,13 +154,14 @@ is_valid, network = BitcoinCashValidator.validate_cash_address(
     "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5"
 )
 
-# Verify authentication
+# Verify authentication with domain binding
 is_valid, reason = verify_bitcoin_cash_auth(
     user_id="user_123",
     timestamp=1234567890,
     public_key="0279BE...",
     signature="3045...",
-    expected_address="bitcoincash:qz7f..."
+    expected_address="bitcoincash:qz7f...",
+    domain="app.example.com"  # Optional: prevents phishing across domains
 )
 ```
 

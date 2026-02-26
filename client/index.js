@@ -199,16 +199,18 @@ class BitcoinCashOAuthClient {
    * Create authentication message (userId,timestamp)
    * @param {string} userId
    * @param {number} timestamp - Unix timestamp (optional, defaults to now)
+   * @param {string} domain - Domain/host (optional, defaults to window.location.host or 'oauth')
    * @returns {string}
    */
-  createAuthMessage(userId, timestamp = null) {
+  createAuthMessage(userId, timestamp = null, domain = null) {
     const ts = timestamp || Math.floor(Date.now() / 1000);
-    return `${userId},${ts}`;
+    const host = domain || (typeof window !== 'undefined' && window?.location?.host) || 'oauth';
+    return `bitcoincash-oauth|${host}|${userId}|${ts}`;
   }
 
   /**
    * Sign authentication message with private key
-   * @param {string} message - The message to sign (userId,timestamp)
+   * @param {string} message - The message to sign (protocol|domain|userId|timestamp)
    * @param {string} privateKeyHex - Hex-encoded private key
    * @returns {Promise<string>} DER-encoded signature in hex
    */
@@ -233,11 +235,12 @@ class BitcoinCashOAuthClient {
    * @param {string} privateKeyHex
    * @param {string} publicKeyHex
    * @param {number} timestamp - Optional timestamp
+   * @param {string} domain - Optional domain for message binding
    * @returns {Promise<Object>} Authentication result with access_token
    */
-  async authenticate(userId, privateKeyHex, publicKeyHex, timestamp = null) {
+  async authenticate(userId, privateKeyHex, publicKeyHex, timestamp = null, domain = null) {
     const ts = timestamp || Math.floor(Date.now() / 1000);
-    const message = this.createAuthMessage(userId, ts);
+    const message = this.createAuthMessage(userId, ts, domain);
     const signature = await this.signAuthMessage(message, privateKeyHex);
 
     const response = await fetch(`${this.serverUrl}/auth/token`, {
