@@ -27,6 +27,9 @@ class RegisterResponse(BaseModel):
 class TokenRequest(BaseModel):
     user_id: str
     timestamp: int = Field(..., description="Unix timestamp when message was signed")
+    domain: str = Field(
+        default="oauth", description="Domain for message binding (prevents phishing)"
+    )
     public_key: str = Field(..., description="Hex-encoded public key")
     signature: str = Field(..., description="DER-encoded signature in hex")
     scopes: Optional[List[str]] = Field(default=["read"], description="OAuth scopes")
@@ -144,6 +147,7 @@ class BitcoinCashOAuth:
                 public_key=request.public_key,
                 signature=request.signature,
                 expected_address=expected_address,
+                domain=request.domain,
             )
 
             if not is_valid:

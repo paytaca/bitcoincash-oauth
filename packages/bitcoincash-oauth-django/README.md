@@ -153,6 +153,7 @@ Obtain an OAuth token using Bitcoin Cash signature. The client must sign the mes
 {
   "user_id": "user_abc123",
   "timestamp": 1234567890,
+  "domain": "app.example.com",
   "public_key": "0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",
   "signature": "3045022100...",
   "scopes": ["read", "write"]

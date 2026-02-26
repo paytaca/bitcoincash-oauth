@@ -33,6 +33,7 @@ class TokenRequestSerializer(serializers.Serializer):
 
     user_id = serializers.CharField(required=True)
     timestamp = serializers.IntegerField(required=True)
+    domain = serializers.CharField(required=False, default="oauth")
     public_key = serializers.CharField(required=True)
     signature = serializers.CharField(required=True)
     scopes = serializers.ListField(
@@ -180,6 +181,7 @@ class TokenView(APIView):
 
         user_id = serializer.validated_data["user_id"]
         timestamp = serializer.validated_data["timestamp"]
+        domain = serializer.validated_data.get("domain", "oauth")
         public_key = serializer.validated_data["public_key"]
         signature = serializer.validated_data["signature"]
         scopes = serializer.validated_data.get("scopes", ["read"])
@@ -200,6 +202,7 @@ class TokenView(APIView):
             public_key=public_key,
             signature=signature,
             expected_address=expected_address,
+            domain=domain,
         )
 
         if not is_valid:

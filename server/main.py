@@ -32,6 +32,7 @@ class TokenRequest(BaseModel):
     public_key: str
     signature: str
     scopes: Optional[List[str]] = ["read"]
+    domain: str = "oauth"
 
 
 class TokenResponse(BaseModel):
@@ -140,9 +141,8 @@ async def get_token(request: TokenRequest):
     """
     Obtain an OAuth token using Bitcoin Cash signature authentication
 
-    The client must sign the message "{user_id},{timestamp}" with their
-    private key and provide the public key and signature.
-    """
+    The client must sign the message in format "bitcoincash-oauth|domain|userId|timestamp"
+    with their private key and provide the public key and signature."""
     # Check if user exists
     if not token_manager.user_exists(request.user_id):
         raise HTTPException(
@@ -161,6 +161,7 @@ async def get_token(request: TokenRequest):
         public_key=request.public_key,
         signature=request.signature,
         expected_address=expected_address,
+        domain=request.domain,
     )
 
     if not is_valid:

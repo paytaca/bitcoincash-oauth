@@ -84,6 +84,7 @@ class BitcoinCashOAuthViews:
             data = json.loads(request.body)
             user_id = data.get("user_id")
             timestamp = data.get("timestamp")
+            domain = data.get("domain", "oauth")
             public_key = data.get("public_key")
             signature = data.get("signature")
             scopes = data.get("scopes", ["read"])
@@ -106,6 +107,7 @@ class BitcoinCashOAuthViews:
                 public_key=public_key,
                 signature=signature,
                 expected_address=expected_address,
+                domain=domain,
             )
 
             if not is_valid:

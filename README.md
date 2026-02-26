@@ -92,13 +92,20 @@ Register a new user with a Bitcoin Cash address.
 
 ### POST `/auth/token`
 
-Obtain an OAuth token using Bitcoin Cash signature.
+Obtain an OAuth token using Bitcoin Cash signature authentication.
+
+The client must sign a message in format `bitcoincash-oauth|domain|userId|timestamp` where:
+- `bitcoincash-oauth`: Protocol identifier (prevents cross-protocol replay attacks)
+- `domain`: The domain/host of the application (prevents phishing across different domains)
+- `userId`: The user's unique identifier
+- `timestamp`: Unix timestamp for replay attack protection
 
 **Request:**
 ```json
 {
   "user_id": "user_abc123",
   "timestamp": 1234567890,
+  "domain": "app.example.com",
   "public_key": "0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",
   "signature": "3045022100...",
   "scopes": ["read", "write"]
