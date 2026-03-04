@@ -125,21 +125,13 @@ class MyViewSet(viewsets.ViewSet):
 
 ### POST `/auth/register`
 
-Register a new user with a Bitcoin Cash address. When `REQUIRE_SIGNATURE_FOR_REGISTRATION` is enabled, proof of wallet ownership is required.
+Register a new user with a Bitcoin Cash address. Signature verification is required to prove wallet ownership.
 
-**Request (without signature verification):**
+**Request:**
 ```json
 {
-  "address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
-  "user_id": "optional_custom_id"
-}
-```
-
-**Request (with signature verification):**
-```json
-{
-  "address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
-  "user_id": "optional_custom_id",
+  "bitcoincash_address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
+  "user_id": "your_user_id",
   "timestamp": 1234567890,
   "domain": "app.example.com",
   "public_key": "0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",
@@ -290,7 +282,6 @@ BITCOINCASH_OAUTH = {
     'TOKEN_TTL': 3600,  # 1 hour
     'REFRESH_TOKEN_TTL': 2592000,  # 30 days
     'MAX_TOKENS_PER_USER': 5,
-    'REQUIRE_SIGNATURE_FOR_REGISTRATION': True,  # Require signature for registration
 }
 ```
 
@@ -300,7 +291,6 @@ BITCOINCASH_OAUTH = {
 | `REFRESH_TOKEN_TTL` | `2592000` | Refresh token lifetime (seconds) |
 | `MAX_TOKENS_PER_USER` | `5` | Maximum active tokens per user |
 | `MAX_TIMESTAMP_DIFF` | `300` | Max timestamp age for replay protection (seconds) |
-| `REQUIRE_SIGNATURE_FOR_REGISTRATION` | `False` | Require signature verification for registration |
 
 ### Custom Models (Avoiding Conflicts)
 

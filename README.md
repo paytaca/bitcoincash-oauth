@@ -2,7 +2,7 @@
 
 OAuth2 authentication library using Bitcoin Cash ECDSA signatures for identity verification.
 
-[![Version](https://img.shields.io/badge/version-0.2.1-blue.svg)](https://github.com/paytaca/bitcoincash-oauth/releases)
+[![Version](https://img.shields.io/badge/version-0.2.2-blue.svg)](https://github.com/paytaca/bitcoincash-oauth/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Overview
@@ -162,7 +162,7 @@ All server packages provide these endpoints:
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/auth/register` | POST | Register new user (signature verification optional/configurable) |
+| `/auth/register` | POST | Register new user (signature verification required) |
 | `/auth/token` | POST | Obtain OAuth token via signature |
 | `/auth/refresh` | POST | Refresh access token |
 | `/auth/revoke` | POST | Revoke access token |
@@ -172,21 +172,12 @@ All server packages provide these endpoints:
 
 Registration supports optional signature-based verification to prevent wallet address squatting:
 
-**Basic Registration:**
+**Registration (signature required):**
 ```json
 POST /auth/register
 {
-  "address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
-  "user_id": "optional_custom_id"
-}
-```
-
-**Signature-Based Registration (when enabled):**
-```json
-POST /auth/register
-{
-  "address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
-  "user_id": "optional_custom_id",
+  "bitcoincash_address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
+  "user_id": "your_user_id",
   "timestamp": 1234567890,
   "domain": "app.example.com",
   "public_key": "0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",
@@ -199,7 +190,7 @@ POST /auth/register
 ## Security Features
 
 - **Signature-Based Authentication**: ECDSA signatures using secp256k1
-- **Signature-Based Registration**: Optional proof-of-ownership to prevent address squatting
+- **Signature-Based Registration**: Required proof-of-ownership to prevent address squatting
 - **Domain Binding**: Prevents phishing across different domains
 - **Replay Protection**: Timestamp validation (5-minute window)
 - **Token Rotation**: Refresh tokens rotate for enhanced security

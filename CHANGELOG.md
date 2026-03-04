@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-03-04
+
+### All Packages
+
+#### Changed
+- **Documentation updates**: Updated all README files to reflect recent API changes
+  - Changed registration field from `address` to `bitcoincash_address` for consistency
+  - Updated registration documentation to show signature verification is now required (not optional)
+  - Removed references to `REQUIRE_SIGNATURE_FOR_REGISTRATION` setting (signatures are now always required)
+
+### Package Versions
+- **Django**: `0.2.5` (unchanged)
+- **FastAPI**: `0.2.3` (unchanged)
+- **JavaScript Client**: `0.2.1` → `0.2.2`
+
 ## [0.2.1] - 2026-03-04
 
 ### Django Package (bitcoincash-oauth-django)
@@ -256,6 +271,7 @@ If you previously installed version 1.0.0:
 - `bitcoincash-oauth-fastapi` - https://pypi.org/project/bitcoincash-oauth-fastapi/
 - `bitcoincash-oauth-client` - https://www.npmjs.com/package/bitcoincash-oauth-client
 
+[0.2.2]: https://github.com/paytaca/bitcoincash-oauth/releases/tag/v0.2.2
 [0.2.1]: https://github.com/paytaca/bitcoincash-oauth/releases/tag/v0.2.1
 [0.2.0]: https://github.com/paytaca/bitcoincash-oauth/releases/tag/v0.2.0
 [0.1.1]: https://github.com/paytaca/bitcoincash-oauth/releases/tag/v0.1.1

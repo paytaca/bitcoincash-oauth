@@ -43,21 +43,13 @@ The following endpoints are automatically added:
 
 ### POST `/auth/register`
 
-Register a new user with a Bitcoin Cash address. When `REQUIRE_SIGNATURE_FOR_REGISTRATION` is enabled, proof of wallet ownership is required.
+Register a new user with a Bitcoin Cash address. Signature verification is required to prove wallet ownership.
 
-**Request (without signature verification):**
+**Request:**
 ```json
 {
-  "address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
-  "user_id": "optional_custom_id"
-}
-```
-
-**Request (with signature verification):**
-```json
-{
-  "address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
-  "user_id": "optional_custom_id",
+  "bitcoincash_address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
+  "user_id": "your_user_id",
   "timestamp": 1234567890,
   "domain": "app.example.com",
   "public_key": "0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",
@@ -76,9 +68,8 @@ Register a new user with a Bitcoin Cash address. When `REQUIRE_SIGNATURE_FOR_REG
 ```json
 {
   "user_id": "user_abc123",
-  "address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
-  "message": "User registered successfully",
-  "signature_required": false
+  "bitcoincash_address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
+  "message": "User registered successfully"
 }
 ```
 
@@ -260,7 +251,6 @@ class MyOAuthToken(OAuthToken):
 | `refresh_token_ttl` | `2592000` | Refresh token lifetime (seconds) |
 | `max_tokens_per_user` | `5` | Maximum active tokens per user |
 | `max_timestamp_diff` | `300` | Max timestamp age for replay protection |
-| `require_signature_for_registration` | `false` | Require signature verification for registration |
 
 ### Environment Variables
 
@@ -270,7 +260,6 @@ DATABASE_URL=postgresql+asyncpg://user:pass@localhost/db
 
 # Security
 SECRET_KEY=your-secret-key-here
-REQUIRE_SIGNATURE_FOR_REGISTRATION=true
 
 # Token settings
 ACCESS_TOKEN_LIFETIME=3600
