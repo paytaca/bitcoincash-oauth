@@ -5,7 +5,7 @@ FastAPI Depends() functions for authentication and authorization
 Usage:
     @app.get("/protected")
     async def protected_endpoint(
-        user: BitcoinCashUser = Depends(get_current_user),
+        user: "BitcoinCashUser" = Depends(get_current_user),
         scopes: List[str] = Depends(has_scope(["read", "write"]))
     ):
         return {"user_id": user.user_id}
@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from .database import get_db
-from .models import BitcoinCashUser, OAuthToken
+from .config import get_user_model, get_token_model
 from .cache import cache_manager
 from .exceptions import (
     InvalidTokenError,
@@ -34,13 +34,13 @@ oauth2_scheme = HTTPBearer(auto_error=False)
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
-) -> BitcoinCashUser:
+):
     """
     FastAPI dependency to get the current authenticated user
 
     Usage:
         @app.get("/me")
-        async def get_me(user: BitcoinCashUser = Depends(get_current_user)):
+        async def get_me(user: "BitcoinCashUser" = Depends(get_current_user)):
             return {"user_id": user.user_id}
 
     Raises:
@@ -60,7 +60,7 @@ async def get_current_user(
         raise RevokedTokenError().to_http_exception()
 
     # Validate token
-    token = await OAuthToken.validate_access_token(db, token_str)
+    token = await get_token_model().validate_access_token(db, token_str)
 
     if not token:
         raise InvalidTokenError().to_http_exception()
@@ -71,7 +71,7 @@ async def get_current_user(
 async def get_current_token(
     credentials: HTTPAuthorizationCredentials = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
-) -> OAuthToken:
+):
     """
     FastAPI dependency to get the current OAuth token
 
@@ -94,7 +94,7 @@ async def get_current_token(
         raise RevokedTokenError().to_http_exception()
 
     # Validate token
-    token = await OAuthToken.validate_access_token(db, token_str)
+    token = await get_token_model().validate_access_token(db, token_str)
 
     if not token:
         raise InvalidTokenError().to_http_exception()
@@ -124,7 +124,7 @@ def has_scope(required_scopes: List[str]):
         required_scopes: List of required scopes (any one is sufficient)
     """
 
-    async def check_scope(token: OAuthToken = Depends(get_current_token)) -> None:
+    async def check_scope(token=Depends(get_current_token)) -> None:
         user_scopes = set(token.scopes)
         required = set(required_scopes)
 
@@ -151,7 +151,7 @@ def has_all_scopes(required_scopes: List[str]):
         required_scopes: List of required scopes (all must be present)
     """
 
-    async def check_all_scopes(token: OAuthToken = Depends(get_current_token)) -> None:
+    async def check_all_scopes(token=Depends(get_current_token)) -> None:
         user_scopes = set(token.scopes)
         required = set(required_scopes)
 
@@ -163,7 +163,7 @@ def has_all_scopes(required_scopes: List[str]):
     return check_all_scopes
 
 
-async def get_wallet_hash(user: BitcoinCashUser = Depends(get_current_user)) -> str:
+async def get_wallet_hash(user=Depends(get_current_user)) -> str:
     """
     FastAPI dependency to get the wallet hash (user_id)
 
@@ -175,7 +175,9 @@ async def get_wallet_hash(user: BitcoinCashUser = Depends(get_current_user)) -> 
     return user.user_id
 
 
-async def get_bitcoin_address(user: BitcoinCashUser = Depends(get_current_user)) -> str:
+async def get_bitcoin_address(
+    user=Depends(get_current_user),
+) -> str:
     """
     FastAPI dependency to get the Bitcoin Cash address
 
@@ -187,7 +189,7 @@ async def get_bitcoin_address(user: BitcoinCashUser = Depends(get_current_user))
     return user.bitcoin_address
 
 
-async def get_oauth_scopes(token: OAuthToken = Depends(get_current_token)) -> List[str]:
+async def get_oauth_scopes(token=Depends(get_current_token)) -> List[str]:
     """
     FastAPI dependency to get OAuth scopes
 
@@ -215,9 +217,7 @@ class RequireOwner:
     def __init__(self, param_name: str = "user_id"):
         self.param_name = param_name
 
-    async def __call__(
-        self, current_user: BitcoinCashUser = Depends(get_current_user), **kwargs
-    ) -> None:
+    async def __call__(self, current_user=Depends(get_current_user), **kwargs) -> None:
         target_id = kwargs.get(self.param_name)
 
         if target_id and current_user.user_id != target_id:
@@ -247,7 +247,7 @@ class RequireOwnerOrReadOnly:
     async def __call__(
         self,
         request,
-        current_user: BitcoinCashUser = Depends(get_current_user),
+        current_user=Depends(get_current_user),
         **kwargs,
     ) -> None:
         # Allow read methods

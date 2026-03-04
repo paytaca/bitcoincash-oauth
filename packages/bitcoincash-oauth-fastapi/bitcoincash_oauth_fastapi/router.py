@@ -11,9 +11,8 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from .config import get_settings
+from .config import get_settings, get_user_model, get_token_model
 from .database import get_db
-from .models import BitcoinCashUser, OAuthToken
 from .cache import cache_manager
 from .exceptions import (
     InvalidAddressError,
@@ -195,8 +194,8 @@ def create_oauth_router(
 
         # Check if user already exists by address
         result = await db.execute(
-            select(BitcoinCashUser).where(
-                BitcoinCashUser.bitcoin_address == data.address
+            select(get_user_model()).where(
+                get_user_model().bitcoin_address == data.address
             )
         )
         existing = result.scalar_one_or_none()
@@ -212,7 +211,7 @@ def create_oauth_router(
         # Check if user_id is already taken
         if data.user_id:
             result = await db.execute(
-                select(BitcoinCashUser).where(BitcoinCashUser.user_id == data.user_id)
+                select(get_user_model()).where(get_user_model().user_id == data.user_id)
             )
             if result.scalar_one_or_none():
                 await emit_registration_failed(
@@ -224,7 +223,7 @@ def create_oauth_router(
 
         try:
             # Create new user
-            user = BitcoinCashUser(
+            user = get_user_model()(
                 user_id=data.user_id or data.address,
                 bitcoin_address=data.address,
                 public_key=data.public_key or "",
@@ -261,7 +260,7 @@ def create_oauth_router(
 
         # Check if user exists
         result = await db.execute(
-            select(BitcoinCashUser).where(BitcoinCashUser.user_id == data.user_id)
+            select(get_user_model()).where(get_user_model().user_id == data.user_id)
         )
         user = result.scalar_one_or_none()
 
@@ -302,7 +301,7 @@ def create_oauth_router(
         ip_address = get_client_ip(request)
         user_agent = get_user_agent(request)
 
-        oauth_token = await OAuthToken.create_token_pair(
+        oauth_token = await get_token_model().create_token_pair(
             db=db,
             user=user,
             scopes=data.scopes,
@@ -335,7 +334,9 @@ def create_oauth_router(
         """Refresh an access token using a refresh token"""
 
         # Validate refresh token
-        old_token = await OAuthToken.validate_refresh_token(db, data.refresh_token)
+        old_token = await get_token_model().validate_refresh_token(
+            db, data.refresh_token
+        )
 
         if not old_token:
             raise InvalidTokenError(
@@ -361,7 +362,7 @@ def create_oauth_router(
         ip_address = get_client_ip(request)
         user_agent = get_user_agent(request)
 
-        new_token = await OAuthToken.create_token_pair(
+        new_token = await get_token_model().create_token_pair(
             db=db,
             user=user,
             scopes=scopes,
@@ -394,8 +395,9 @@ def create_oauth_router(
         """Revoke an access token"""
 
         # Find token
+        TokenModel = get_token_model()
         result = await db.execute(
-            select(OAuthToken).where(OAuthToken.access_token == data.token)
+            select(TokenModel).where(TokenModel.access_token == data.token)
         )
         oauth_token = result.scalar_one_or_none()
 

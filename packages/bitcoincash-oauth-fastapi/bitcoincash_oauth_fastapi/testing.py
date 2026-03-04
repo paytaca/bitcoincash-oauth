@@ -33,9 +33,8 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import BitcoinCashUser, OAuthToken
 from .database import db_manager, get_db
-from .config import get_settings
+from .config import get_settings, get_user_model, get_token_model
 from .cache import cache_manager
 
 
@@ -88,7 +87,7 @@ class OAuthTestClient:
         address: str,
         public_key: str = "",
         is_active: bool = True,
-    ) -> BitcoinCashUser:
+    ):
         """
         Create a test user
 
@@ -99,9 +98,9 @@ class OAuthTestClient:
             is_active: Whether user is active
 
         Returns:
-            BitcoinCashUser instance
+            User instance
         """
-        user = BitcoinCashUser(
+        user = get_user_model()(
             user_id=wallet_hash,
             bitcoin_address=address,
             public_key=public_key,
@@ -116,10 +115,10 @@ class OAuthTestClient:
 
     async def create_token(
         self,
-        user: BitcoinCashUser,
+        user,
         scopes: Optional[List[str]] = None,
         expired: bool = False,
-    ) -> OAuthToken:
+    ):
         """
         Create a test token
 
@@ -129,7 +128,7 @@ class OAuthTestClient:
             expired: Whether token should be expired
 
         Returns:
-            OAuthToken instance
+            Token instance
         """
         from datetime import timedelta
 
@@ -141,10 +140,11 @@ class OAuthTestClient:
         else:
             expires_at = now + timedelta(seconds=settings.ACCESS_TOKEN_LIFETIME)
 
-        token = OAuthToken(
+        TokenModel = get_token_model()
+        token = TokenModel(
             user_id=user.user_id,
-            access_token=OAuthToken.generate_token(),
-            refresh_token=OAuthToken.generate_token(),
+            access_token=TokenModel.generate_token(),
+            refresh_token=TokenModel.generate_token(),
             scopes=scopes or ["read"],
             expires_at=expires_at,
             refresh_expires_at=now + timedelta(seconds=settings.REFRESH_TOKEN_LIFETIME),
@@ -156,7 +156,7 @@ class OAuthTestClient:
 
         return token
 
-    async def get_auth_header(self, token: OAuthToken) -> dict:
+    async def get_auth_header(self, token) -> dict:
         """Get authorization header for a token"""
         return {"Authorization": f"Bearer {token.access_token}"}
 

@@ -32,8 +32,8 @@ from .config import Settings, get_settings, reload_settings
 from .database import DatabaseManager, db_manager, get_db
 from .cache import CacheManager, cache_manager
 
-# Models
-from .models import Base, BitcoinCashUser, OAuthToken
+# Note: Models are NOT imported at module level to avoid import order issues.
+# Import from .models directly or use the model registry when needed.
 
 # Exceptions
 from .exceptions import (
@@ -162,10 +162,8 @@ __all__ = [
     # Cache
     "CacheManager",
     "cache_manager",
-    # Models
-    "Base",
-    "BitcoinCashUser",
-    "OAuthToken",
+    # Note: Models are not exported at module level.
+    # Import from .models directly or use the model registry.
     # Exceptions
     "BitcoinCashAuthError",
     "InvalidSignatureError",

@@ -200,6 +200,59 @@ app.include_router(create_oauth_router(), prefix="/auth")
 
 ## Configuration
 
+All settings can be configured via environment variables with the prefix `BITCOINCASH_OAUTH_`:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `USER_MODEL` | `None` | Custom user model path (e.g., `myapp.models.MyBitcoinCashUser`) |
+| `TOKEN_MODEL` | `None` | Custom token model path (e.g., `myapp.models.MyOAuthToken`) |
+
+### Custom Models (Avoiding Conflicts)
+
+If your project already has models named `BitcoinCashUser` or `OAuthToken`, you can use custom models:
+
+```python
+# main.py
+from bitcoincash_oauth_fastapi import create_oauth_router, init_oauth, register_model
+from myapp.models import MyBitcoinCashUser, MyOAuthToken
+
+# Register custom models
+register_model('user', MyBitcoinCashUser)
+register_model('token', MyOAuthToken)
+
+app = FastAPI()
+
+@app.on_event("startup")
+async def startup():
+    await init_oauth()
+
+app.include_router(create_oauth_router())
+```
+
+Or use environment variables:
+
+```bash
+export BITCOINCASH_OAUTH_USER_MODEL="myapp.models.MyBitcoinCashUser"
+export BITCOINCASH_OAUTH_TOKEN_MODEL="myapp.models.MyOAuthToken"
+```
+
+Your custom models should inherit from the base models:
+
+```python
+# myapp/models.py
+from bitcoincash_oauth_fastapi.models import BitcoinCashUser, OAuthToken
+
+class MyBitcoinCashUser(BitcoinCashUser):
+    __tablename__ = "my_custom_users"
+    # Add your custom fields
+
+class MyOAuthToken(OAuthToken):
+    __tablename__ = "my_custom_tokens"
+    # Add your custom fields
+```
+
+## Configuration Reference
+
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `router_prefix` | `"/auth"` | URL prefix for OAuth endpoints |

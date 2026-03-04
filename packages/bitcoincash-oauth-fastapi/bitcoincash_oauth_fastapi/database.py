@@ -13,7 +13,6 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 
 from .config import get_settings
-from .models import Base
 
 
 class DatabaseManager:
@@ -66,13 +65,22 @@ class DatabaseManager:
 
         return engine
 
-    async def init_db(self) -> None:
-        """Initialize database and create tables"""
+    async def init_db(self, base=None) -> None:
+        """Initialize database and create tables
+
+        Args:
+            base: Optional SQLAlchemy Base class to use (defaults to models.Base)
+        """
         if self.engine is None:
             self.init_engine()
 
+        if base is None:
+            from .models import Base
+
+            base = Base
+
         async with self.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(base.metadata.create_all)
 
         self._initialized = True
 
@@ -96,12 +104,19 @@ class DatabaseManager:
             finally:
                 await session.close()
 
-    async def cleanup_expired_tokens(self) -> int:
-        """Clean up expired tokens"""
-        from .models import OAuthToken
+    async def cleanup_expired_tokens(self, token_model=None) -> int:
+        """Clean up expired tokens
+
+        Args:
+            token_model: Optional token model class to use (defaults to models.OAuthToken)
+        """
+        if token_model is None:
+            from .models import OAuthToken
+
+            token_model = OAuthToken
 
         async with self.session_maker() as session:
-            return await OAuthToken.cleanup_expired_tokens(session)
+            return await token_model.cleanup_expired_tokens(session)
 
 
 # Global instance

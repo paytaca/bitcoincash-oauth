@@ -91,6 +91,17 @@ class Settings(BaseSettings):
     # Router prefix
     ROUTER_PREFIX: str = Field(default="/auth")
 
+    # Custom model paths (to avoid conflicts with existing models)
+    # Format: "module.path.ModelClass"
+    USER_MODEL: Optional[str] = Field(
+        default=None,
+        description="Custom user model path (e.g., 'myapp.models.MyBitcoinCashUser')",
+    )
+    TOKEN_MODEL: Optional[str] = Field(
+        default=None,
+        description="Custom token model path (e.g., 'myapp.models.MyOAuthToken')",
+    )
+
     class Config:
         env_prefix = "BITCOINCASH_OAUTH_"
         case_sensitive = True
@@ -124,3 +135,74 @@ def reload_settings() -> Settings:
     """
     get_settings.cache_clear()
     return get_settings()
+
+
+# Model registry for swappable models
+_model_registry = {}
+
+
+def register_model(name: str, model_class):
+    """
+    Register a custom model class
+
+    Args:
+        name: Model name ('user' or 'token')
+        model_class: The model class to register
+    """
+    _model_registry[name] = model_class
+
+
+def get_user_model():
+    """
+    Get the user model class
+
+    Returns:
+        The user model class (either custom or default BitcoinCashUser)
+    """
+    from .models import BitcoinCashUser
+
+    settings = get_settings()
+
+    if "user" in _model_registry:
+        return _model_registry["user"]
+
+    if settings.USER_MODEL:
+        # Dynamically import custom model
+        module_path, class_name = settings.USER_MODEL.rsplit(".", 1)
+        module = __import__(module_path, fromlist=[class_name])
+        return getattr(module, class_name)
+
+    return BitcoinCashUser
+
+
+def get_token_model():
+    """
+    Get the token model class
+
+    Returns:
+        The token model class (either custom or default OAuthToken)
+    """
+    from .models import OAuthToken
+
+    settings = get_settings()
+
+    if "token" in _model_registry:
+        return _model_registry["token"]
+
+    if settings.TOKEN_MODEL:
+        # Dynamically import custom model
+        module_path, class_name = settings.TOKEN_MODEL.rsplit(".", 1)
+        module = __import__(module_path, fromlist=[class_name])
+        return getattr(module, class_name)
+
+    return OAuthToken
+
+
+def get_model_registry():
+    """
+    Get the model registry dictionary
+
+    Returns:
+        Dict containing registered models
+    """
+    return _model_registry

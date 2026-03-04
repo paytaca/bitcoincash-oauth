@@ -9,7 +9,7 @@ from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from .models import BitcoinCashUser, OAuthToken
+from .config import get_user_model, get_token_model
 from .dependencies import oauth2_scheme
 
 
@@ -126,10 +126,11 @@ async def get_user_token_count(
     """
     from sqlalchemy import func
 
-    query = select(func.count()).where(OAuthToken.user_id == user_id)
+    TokenModel = get_token_model()
+    query = select(func.count()).where(TokenModel.user_id == user_id)
 
     if active_only:
-        query = query.where(OAuthToken.is_revoked == False)
+        query = query.where(TokenModel.is_revoked == False)
 
     result = await db.execute(query)
     return result.scalar()
@@ -150,10 +151,11 @@ async def cleanup_user_tokens(
         int: Number of tokens revoked
     """
     # Get all tokens ordered by creation date
+    TokenModel = get_token_model()
     result = await db.execute(
-        select(OAuthToken)
-        .where(OAuthToken.user_id == user_id, OAuthToken.is_revoked == False)
-        .order_by(OAuthToken.created_at.desc())
+        select(TokenModel)
+        .where(TokenModel.user_id == user_id, TokenModel.is_revoked == False)
+        .order_by(TokenModel.created_at.desc())
     )
     tokens = result.scalars().all()
 
@@ -181,7 +183,7 @@ class TokenExpiryInfo:
             print(f"Token expires in {expiry_info.seconds_remaining} seconds")
     """
 
-    def __init__(self, token: OAuthToken):
+    def __init__(self, token):
         self.token = token
         self.expires_at = token.expires_at
         self.now = datetime.now(timezone.utc)
