@@ -25,7 +25,7 @@ Configuration (via environment variables):
     BITCOINCASH_OAUTH_REDIS_URL=redis://localhost:6379/0
 """
 
-__version__ = "2.0.0"
+__version__ = "0.2.0"
 
 # Core exports
 from .config import Settings, get_settings, reload_settings

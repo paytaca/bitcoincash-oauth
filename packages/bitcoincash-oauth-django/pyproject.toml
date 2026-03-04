@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bitcoincash-oauth-django"
-version = "0.1.1"
+version = "0.2.0"
 description = "Bitcoin Cash OAuth authentication for Django and Django REST Framework"
 readme = "README.md"
 license = {text = "MIT"}

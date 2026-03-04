@@ -5,6 +5,115 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-03-04
+
+### Release 0.2.0 - Major Improvements
+
+This release includes significant improvements across all packages, focusing on security, database persistence, and production readiness.
+
+### JavaScript Client (bitcoincash-oauth-client)
+
+#### Added
+- Domain parameter support in authentication payload
+- Custom error classes: OAuthError, NetworkError, AuthenticationError, TokenExpiredError, UserNotFoundError, InvalidTokenError
+- Automatic token refresh with configurable threshold
+- Token validation helper (`isTokenValid()` method)
+- Custom storage keys support (tokenKey, refreshTokenKey options)
+- Debug mode with logging support
+- Capacitor/hybrid app environment detection
+- `authenticatedRequest()` method with automatic retry on 401
+- `destroy()` method for cleanup
+- Comprehensive TypeScript declarations
+
+#### Security
+- Better fetch detection with helpful error messages for Capacitor environments
+- Automatic token refresh prevents expired token issues
+
+### Django Package (bitcoincash-oauth-django)
+
+#### Added
+- **Database persistence** with Django models (BitcoinCashUser, OAuthToken)
+- **Signature-based registration** - requires proof of wallet ownership (configurable)
+- Django authentication backend integration
+- Configurable token expiration settings
+- Django admin interface for users and tokens
+- Management commands:
+  - `bitcoincash_cleanup_tokens` - Remove expired tokens
+  - `bitcoincash_create_user` - Create users manually
+  - `bitcoincash_revoke_token` - Revoke specific tokens
+- Webhook signals for token lifecycle events
+- Comprehensive permission classes (IsOwner, HasScope, IsOwnerOrReadOnly, etc.)
+- Utility functions (get_wallet_hash, filter_by_owner, etc.)
+- Token blacklist with cache support for immediate invalidation
+- Testing utilities (OAuthTestCase, MockSignatureVerifier)
+- Database migrations included
+
+#### Security
+- Signature verification required for registration (prevents wallet squatting)
+- Token rotation on refresh
+- Cache-based blacklist for immediate token invalidation
+- Automatic cleanup of expired tokens
+
+#### Breaking Changes
+- Now requires database (replaces in-memory storage)
+- Registration now requires signature by default (configurable via settings)
+
+### FastAPI Package (bitcoincash-oauth-fastapi)
+
+#### Added
+- **SQLAlchemy async database models** for multi-worker support
+- **Database support** for PostgreSQL, MySQL, SQLite
+- **Signature-based registration** with configurable requirement
+- Pydantic settings with environment variable support
+- Redis cache support for token blacklist
+- Custom exception hierarchy with HTTP status codes
+- FastAPI dependencies (get_current_user, has_scope, etc.)
+- Event system for webhooks
+- Comprehensive utility functions
+- Token blacklist for immediate invalidation across workers
+- Testing utilities with pytest fixtures
+- Updated API router with full database persistence
+
+#### Security
+- Signature verification for registration
+- Token rotation on refresh
+- Cache-based blacklist (Redis or in-memory)
+- Database persistence for production multi-worker setups
+
+#### Breaking Changes
+- Now uses database instead of in-memory storage
+- Registration requires signature by default
+- Token response includes user_id field (standardized format)
+
+### Migration Guide
+
+#### JavaScript Client
+No breaking changes. New features are opt-in via options.
+
+#### Django
+1. Add `bitcoincash_oauth_django` to `INSTALLED_APPS`
+2. Run migrations: `python manage.py migrate`
+3. Configure settings:
+   ```python
+   BITCOINCASH_OAUTH = {
+       'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+       'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+   }
+   ```
+4. Add authentication backend to `AUTHENTICATION_BACKENDS`
+
+#### FastAPI
+1. Set environment variable:
+   ```bash
+   BITCOINCASH_OAUTH_DATABASE_URL=postgresql+asyncpg://user:pass@localhost/db
+   ```
+2. Initialize on startup:
+   ```python
+   @app.on_event("startup")
+   async def startup():
+       await init_oauth()
+   ```
+
 ## [0.1.1] - 2026-02-26
 
 ### Fixed
@@ -123,4 +232,6 @@ If you previously installed version 1.0.0:
 - `bitcoincash-oauth-fastapi` - https://pypi.org/project/bitcoincash-oauth-fastapi/
 - `bitcoincash-oauth-client` - https://www.npmjs.com/package/bitcoincash-oauth-client
 
+[0.2.0]: https://github.com/paytaca/bitcoincash-oauth/releases/tag/v0.2.0
+[0.1.1]: https://github.com/paytaca/bitcoincash-oauth/releases/tag/v0.1.1
 [0.1.0]: https://github.com/paytaca/bitcoincash-oauth/releases/tag/v0.1.0
