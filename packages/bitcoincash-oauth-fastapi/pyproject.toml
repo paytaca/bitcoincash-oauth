@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bitcoincash-oauth-fastapi"
-version = "0.2.0"
+version = "0.2.1"
 description = "Bitcoin Cash OAuth authentication for FastAPI with database persistence"
 readme = "README.md"
 license = {text = "MIT"}
