@@ -2,7 +2,7 @@
 
 OAuth2 authentication library using Bitcoin Cash ECDSA signatures for identity verification.
 
-[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/paytaca/bitcoincash-oauth/releases)
+[![Version](https://img.shields.io/badge/version-0.2.1-blue.svg)](https://github.com/paytaca/bitcoincash-oauth/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Overview
