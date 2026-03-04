@@ -41,23 +41,14 @@ Example Usage:
 # Version
 __version__ = "0.2.0"
 
-# Core validator
+# These modules don't depend on Django being initialized first
+# and can be safely imported at module level
 from .validator import (
     BitcoinCashValidator,
     verify_bitcoin_cash_auth,
     public_key_to_cash_address,
 )
 
-# Note: Models are NOT imported at module level to avoid AppRegistryNotReady.
-# Use django.apps.apps.get_model() or import from .models directly when needed.
-
-# Settings
-from .settings import (
-    get_settings,
-    check_settings,
-)
-
-# Exceptions
 from .exceptions import (
     BitcoinCashAuthError,
     InvalidSignatureError,
@@ -76,178 +67,125 @@ from .exceptions import (
     ConfigurationError,
 )
 
-# Utilities
-from .utils import (
-    get_wallet_hash,
-    get_bitcoin_address,
-    get_oauth_scopes,
-    has_scope,
-    get_current_token,
-    extract_token_from_request,
-    create_registration_message,
-    filter_by_owner,
-    WalletHashExtractor,
-)
-
-# Authentication
-from .authentication import (
-    BitcoinCashOAuthBackend,
-    BitcoinCashModelBackend,
-)
-
-# Signals
-from .signals import (
-    token_created,
-    token_refreshed,
-    token_revoked,
-    user_registered,
-    user_authenticated,
-    authentication_failed,
-    registration_failed,
-)
-
-# Legacy token manager (for backwards compatibility)
-from .token_manager import (
-    TokenManager,
-    TokenData,
-    token_manager,
-)
-
-# Views (legacy - use drf_views for new implementations)
-from .views import (
-    BitcoinCashOAuthViews,
-    oauth_views,
-    register,
-    token,
-    refresh,
-    revoke,
-    me,
-)
-
-# DRF Integration (new views with database support)
-from .drf_views import (
-    IsBitcoinCashAuthenticated,
-    HasScope,
-    IsOwner,
-    IsOwnerOrReadOnly,
-    RegisterView,
-    TokenView,
-    RefreshView,
-    RevokeView,
-    MeView,
-)
-
-# Permissions
-from .permissions import (
-    HasAllScopes,
-    HasReadScope,
-    HasWriteScope,
-    HasAdminScope,
-    HasWalletAddress,
-    IsStaff,
-    IsSuperUser,
-)
-
-# Middleware
-from .middleware import (
-    TokenValidationMiddleware,
-    TokenExpiryHeaderMiddleware,
-    TokenBlacklistMiddleware,
-)
-
-# Testing utilities
-from .testing import (
-    OAuthTestCase,
-    MockSignatureVerifier,
-)
-
 # Default app config for Django
+# This is used by Django to find the AppConfig
 default_app_config = "bitcoincash_oauth_django.apps.BitcoinCashOAuthConfig"
 
-__all__ = [
-    # Version
-    "__version__",
-    # Core
-    "BitcoinCashValidator",
-    "verify_bitcoin_cash_auth",
-    "public_key_to_cash_address",
-    # Note: Models are not exported at module level.
-    # Import from .models directly or use django.apps.apps.get_model()
-    # Settings
-    "get_settings",
-    "check_settings",
-    # Exceptions
-    "BitcoinCashAuthError",
-    "InvalidSignatureError",
-    "ExpiredTimestampError",
-    "TokenExpiredError",
-    "RefreshTokenExpiredError",
-    "UserNotFoundError",
-    "UserAlreadyExistsError",
-    "InvalidTokenError",
-    "RevokedTokenError",
-    "InvalidAddressError",
-    "AddressMismatchError",
-    "InsufficientScopeError",
-    "RateLimitExceededError",
-    "RegistrationError",
-    "ConfigurationError",
-    # Utilities
-    "get_wallet_hash",
-    "get_bitcoin_address",
-    "get_oauth_scopes",
-    "has_scope",
-    "get_current_token",
-    "extract_token_from_request",
-    "create_registration_message",
-    "filter_by_owner",
-    "WalletHashExtractor",
-    # Authentication
-    "BitcoinCashOAuthBackend",
-    "BitcoinCashModelBackend",
-    # Signals
-    "token_created",
-    "token_refreshed",
-    "token_revoked",
-    "user_registered",
-    "user_authenticated",
-    "authentication_failed",
-    "registration_failed",
-    # Legacy
-    "TokenManager",
-    "TokenData",
-    "token_manager",
-    # Views
-    "BitcoinCashOAuthViews",
-    "oauth_views",
-    "register",
-    "token",
-    "refresh",
-    "revoke",
-    "me",
-    # DRF Views (v2.0)
-    "RegisterView",
-    "TokenView",
-    "RefreshView",
-    "RevokeView",
-    "MeView",
-    # Permissions
-    "IsBitcoinCashAuthenticated",
-    "HasScope",
-    "HasAllScopes",
-    "HasReadScope",
-    "HasWriteScope",
-    "HasAdminScope",
-    "IsOwner",
-    "IsOwnerOrReadOnly",
-    "HasWalletAddress",
-    "IsStaff",
-    "IsSuperUser",
-    # Middleware
-    "TokenValidationMiddleware",
-    "TokenExpiryHeaderMiddleware",
-    "TokenBlacklistMiddleware",
-    # Testing
-    "OAuthTestCase",
-    "MockSignatureVerifier",
-]
+# Lazy import registry - these modules have Django dependencies
+# and will only be imported when their attributes are accessed
+_LAZY_MODULES = {
+    # Settings (has django.conf imports)
+    "get_settings": (".settings", "get_settings"),
+    "check_settings": (".settings", "check_settings"),
+    # Utilities (has django.http imports)
+    "get_wallet_hash": (".utils", "get_wallet_hash"),
+    "get_bitcoin_address": (".utils", "get_bitcoin_address"),
+    "get_oauth_scopes": (".utils", "get_oauth_scopes"),
+    "has_scope": (".utils", "has_scope"),
+    "get_current_token": (".utils", "get_current_token"),
+    "extract_token_from_request": (".utils", "extract_token_from_request"),
+    "create_registration_message": (".utils", "create_registration_message"),
+    "filter_by_owner": (".utils", "filter_by_owner"),
+    "WalletHashExtractor": (".utils", "WalletHashExtractor"),
+    # Authentication (has django.contrib.auth imports)
+    "BitcoinCashOAuthBackend": (".authentication", "BitcoinCashOAuthBackend"),
+    "BitcoinCashModelBackend": (".authentication", "BitcoinCashModelBackend"),
+    # Signals (has django.dispatch imports)
+    "token_created": (".signals", "token_created"),
+    "token_refreshed": (".signals", "token_refreshed"),
+    "token_revoked": (".signals", "token_revoked"),
+    "user_registered": (".signals", "user_registered"),
+    "user_authenticated": (".signals", "user_authenticated"),
+    "authentication_failed": (".signals", "authentication_failed"),
+    "registration_failed": (".signals", "registration_failed"),
+    # Token manager (legacy)
+    "TokenManager": (".token_manager", "TokenManager"),
+    "TokenData": (".token_manager", "TokenData"),
+    "token_manager": (".token_manager", "token_manager"),
+    # Views (has django.http imports)
+    "BitcoinCashOAuthViews": (".views", "BitcoinCashOAuthViews"),
+    "oauth_views": (".views", "oauth_views"),
+    "register": (".views", "register"),
+    "token": (".views", "token"),
+    "refresh": (".views", "refresh"),
+    "revoke": (".views", "revoke"),
+    "me": (".views", "me"),
+    # DRF Views (has Django/DRF imports)
+    "IsBitcoinCashAuthenticated": (".drf_views", "IsBitcoinCashAuthenticated"),
+    "HasScope": (".drf_views", "HasScope"),
+    "IsOwner": (".drf_views", "IsOwner"),
+    "IsOwnerOrReadOnly": (".drf_views", "IsOwnerOrReadOnly"),
+    "RegisterView": (".drf_views", "RegisterView"),
+    "TokenView": (".drf_views", "TokenView"),
+    "RefreshView": (".drf_views", "RefreshView"),
+    "RevokeView": (".drf_views", "RevokeView"),
+    "MeView": (".drf_views", "MeView"),
+    # Permissions (has Django imports)
+    "HasAllScopes": (".permissions", "HasAllScopes"),
+    "HasReadScope": (".permissions", "HasReadScope"),
+    "HasWriteScope": (".permissions", "HasWriteScope"),
+    "HasAdminScope": (".permissions", "HasAdminScope"),
+    "HasWalletAddress": (".permissions", "HasWalletAddress"),
+    "IsStaff": (".permissions", "IsStaff"),
+    "IsSuperUser": (".permissions", "IsSuperUser"),
+    # Middleware (has Django imports)
+    "TokenValidationMiddleware": (".middleware", "TokenValidationMiddleware"),
+    "TokenExpiryHeaderMiddleware": (".middleware", "TokenExpiryHeaderMiddleware"),
+    "TokenBlacklistMiddleware": (".middleware", "TokenBlacklistMiddleware"),
+    # Testing (has Django imports)
+    "OAuthTestCase": (".testing", "OAuthTestCase"),
+    "MockSignatureVerifier": (".testing", "MockSignatureVerifier"),
+}
+
+
+def __getattr__(name: str):
+    """
+    Lazy import mechanism for Django-dependent modules.
+
+    This prevents AppRegistryNotReady errors by only importing
+    Django-dependent modules when their attributes are actually accessed.
+    """
+    if name in _LAZY_MODULES:
+        module_path, attr_name = _LAZY_MODULES[name]
+        # Import the module
+        module = __import__(module_path, fromlist=[attr_name])
+        # Get the attribute
+        return getattr(module, attr_name)
+
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
+
+def __dir__():
+    """Return all available attributes for introspection."""
+    return list(_LAZY_MODULES.keys()) + [
+        # Always available
+        "__version__",
+        "BitcoinCashValidator",
+        "verify_bitcoin_cash_auth",
+        "public_key_to_cash_address",
+        # Exceptions
+        "BitcoinCashAuthError",
+        "InvalidSignatureError",
+        "ExpiredTimestampError",
+        "TokenExpiredError",
+        "RefreshTokenExpiredError",
+        "UserNotFoundError",
+        "UserAlreadyExistsError",
+        "InvalidTokenError",
+        "RevokedTokenError",
+        "InvalidAddressError",
+        "AddressMismatchError",
+        "InsufficientScopeError",
+        "RateLimitExceededError",
+        "RegistrationError",
+        "ConfigurationError",
+        # Config
+        "default_app_config",
+    ]
+
+
+# Note: Models are NOT exported at module level.
+# Import from .models directly or use django.apps.apps.get_model()
+# This is necessary to avoid AppRegistryNotReady errors.
+
+__all__ = __dir__()
