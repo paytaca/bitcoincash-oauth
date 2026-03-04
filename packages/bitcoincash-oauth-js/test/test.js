@@ -4,8 +4,16 @@
  * Run with: npm test
  */
 
-import { BitcoinCashOAuthClient } from '../src/index.js';
-import { sha256, ripemd160 } from '../src/utils.js';
+import { 
+  BitcoinCashOAuthClient,
+  OAuthError,
+  NetworkError,
+  AuthenticationError,
+  TokenExpiredError,
+  UserNotFoundError,
+  InvalidTokenError
+} from '../src/index.js';
+import { sha256, ripemd160, isCapacitor, isHybridApp } from '../src/utils.js';
 
 async function runTests() {
   console.log('🧪 Testing Bitcoin Cash OAuth Client\n');
@@ -24,7 +32,8 @@ async function runTests() {
       removeItem(key) {
         delete this.storage[key];
       }
-    }
+    },
+    debug: true
   });
 
   let passed = 0;
@@ -149,6 +158,174 @@ async function runTests() {
     } else {
       throw new Error('Storage operations failed');
     }
+  } catch (error) {
+    console.log('  ✗ Failed:', error.message);
+    failed++;
+  }
+
+  // Test 7: Custom storage keys
+  try {
+    console.log('\nTest 7: Custom storage keys...');
+    const customClient = new BitcoinCashOAuthClient({
+      serverUrl: 'http://localhost:8000',
+      secureStorage: client.secureStorage,
+      tokenKey: 'custom_token_key',
+      refreshTokenKey: 'custom_refresh_key'
+    });
+    
+    // Simulate token storage
+    customClient.secureStorage.setItem('custom_token_key', 'access_token_123');
+    customClient.secureStorage.setItem('custom_refresh_key', 'refresh_token_456');
+    
+    const accessToken = customClient.getToken();
+    const refreshToken = customClient.getRefreshToken();
+    
+    if (accessToken === 'access_token_123' && refreshToken === 'refresh_token_456') {
+      console.log('  ✓ Custom storage keys work correctly');
+      passed++;
+    } else {
+      throw new Error('Custom storage keys failed');
+    }
+  } catch (error) {
+    console.log('  ✗ Failed:', error.message);
+    failed++;
+  }
+
+  // Test 8: Error classes
+  try {
+    console.log('\nTest 8: Error classes...');
+    
+    const oauthError = new OAuthError('Test error', 'TEST_CODE', 400);
+    if (oauthError.code !== 'TEST_CODE' || oauthError.statusCode !== 400) {
+      throw new Error('OAuthError properties incorrect');
+    }
+    
+    const networkError = new NetworkError('Network failed');
+    if (networkError.code !== 'NETWORK_ERROR') {
+      throw new Error('NetworkError code incorrect');
+    }
+    
+    const authError = new AuthenticationError('Auth failed', 401);
+    if (authError.statusCode !== 401) {
+      throw new Error('AuthenticationError statusCode incorrect');
+    }
+    
+    const tokenExpired = new TokenExpiredError();
+    if (tokenExpired.code !== 'TOKEN_EXPIRED' || tokenExpired.statusCode !== 401) {
+      throw new Error('TokenExpiredError properties incorrect');
+    }
+    
+    const userNotFound = new UserNotFoundError();
+    if (userNotFound.code !== 'USER_NOT_FOUND' || userNotFound.statusCode !== 404) {
+      throw new Error('UserNotFoundError properties incorrect');
+    }
+    
+    const invalidToken = new InvalidTokenError();
+    if (invalidToken.code !== 'INVALID_TOKEN' || invalidToken.statusCode !== 401) {
+      throw new Error('InvalidTokenError properties incorrect');
+    }
+    
+    console.log('  ✓ All error classes work correctly');
+    passed++;
+  } catch (error) {
+    console.log('  ✗ Failed:', error.message);
+    failed++;
+  }
+
+  // Test 9: Domain in auth message
+  try {
+    console.log('\nTest 9: Domain in authentication message...');
+    const userId = 'test_user';
+    const timestamp = 1234567890;
+    
+    // Test with domain
+    const messageWithDomain = client.createAuthMessage(userId, timestamp, 'example.com');
+    if (!messageWithDomain.includes('example.com')) {
+      throw new Error('Domain not included in message');
+    }
+    
+    // Test without domain (should use default)
+    const messageWithoutDomain = client.createAuthMessage(userId, timestamp);
+    if (!messageWithoutDomain.includes('|')) {
+      throw new Error('Message format incorrect without domain');
+    }
+    
+    console.log('  ✓ Domain handling works correctly');
+    console.log('  ✓ Message with domain:', messageWithDomain);
+    passed++;
+  } catch (error) {
+    console.log('  ✗ Failed:', error.message);
+    failed++;
+  }
+
+  // Test 10: Token validation
+  try {
+    console.log('\nTest 10: Token validation...');
+    
+    // Should return false when no token stored
+    const noToken = await client.isTokenValid();
+    if (noToken !== false) {
+      throw new Error('Token validation should return false when no token');
+    }
+    
+    // Simulate storing a token
+    client.secureStorage.setItem(client.tokenKey, 'test_token');
+    const hasToken = await client.isTokenValid();
+    if (hasToken !== true) {
+      throw new Error('Token validation should return true when token exists');
+    }
+    
+    console.log('  ✓ Token validation works correctly');
+    passed++;
+  } catch (error) {
+    console.log('  ✗ Failed:', error.message);
+    failed++;
+  }
+
+  // Test 11: Debug mode
+  try {
+    console.log('\nTest 11: Debug mode...');
+    
+    const debugClient = new BitcoinCashOAuthClient({
+      debug: true
+    });
+    
+    if (!debugClient.debug) {
+      throw new Error('Debug mode should be enabled');
+    }
+    
+    // Test that _log method exists and works
+    debugClient._log('Test debug message');
+    debugClient._log('Test with data', { key: 'value' });
+    
+    console.log('  ✓ Debug mode works correctly');
+    passed++;
+  } catch (error) {
+    console.log('  ✗ Failed:', error.message);
+    failed++;
+  }
+
+  // Test 12: Destroy method
+  try {
+    console.log('\nTest 12: Destroy method...');
+    
+    const destroyClient = new BitcoinCashOAuthClient({
+      autoRefresh: true
+    });
+    
+    // Set some internal state
+    destroyClient.tokenExpiry = Date.now() + 3600000;
+    destroyClient._authParams = { userId: 'test' };
+    
+    // Call destroy
+    destroyClient.destroy();
+    
+    if (destroyClient._authParams !== null) {
+      throw new Error('Auth params should be cleared after destroy');
+    }
+    
+    console.log('  ✓ Destroy method works correctly');
+    passed++;
   } catch (error) {
     console.log('  ✗ Failed:', error.message);
     failed++;

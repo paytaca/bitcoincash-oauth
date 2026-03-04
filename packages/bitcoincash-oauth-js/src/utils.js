@@ -3,6 +3,8 @@
  * Handles browser vs Node.js differences
  */
 
+import { NetworkError } from "./errors.js";
+
 let cryptoModule = null;
 
 /**
@@ -39,6 +41,25 @@ export function isBrowser() {
  */
 export function isNode() {
   return typeof process !== 'undefined' && process.versions && process.versions.node;
+}
+
+/**
+ * Check if running in Capacitor environment
+ * @returns {boolean}
+ */
+export function isCapacitor() {
+  return typeof window !== 'undefined' && 
+         window.Capacitor !== undefined &&
+         window.Capacitor.isNative === true;
+}
+
+/**
+ * Check if running in hybrid app environment (Capacitor, Cordova, etc.)
+ * @returns {boolean}
+ */
+export function isHybridApp() {
+  return isCapacitor() || 
+         (typeof window !== 'undefined' && window.cordova !== undefined);
 }
 
 /**
@@ -99,13 +120,43 @@ export async function ripemd160(data) {
 
 /**
  * Get fetch implementation for current environment
+ * @param {Function|null} userProvidedFetch - User-provided fetch implementation
  * @returns {Function} Fetch implementation
+ * @throws {NetworkError} If no fetch implementation is available
  */
-export function getFetch() {
-  // Use global fetch if available (browser or Node.js 18+)
-  if (typeof fetch !== 'undefined') {
-    return fetch;
+export function getFetch(userProvidedFetch = null) {
+  // Always prefer user-provided fetch
+  if (userProvidedFetch) {
+    return userProvidedFetch;
   }
   
-  throw new Error('No fetch implementation available. For Node.js < 18, install node-fetch and pass it as an option.');
+  // Check if we're in a Capacitor environment
+  if (isCapacitor()) {
+    throw new NetworkError(
+      'Capacitor environment detected. ' +
+      'Please provide a custom fetch implementation via options.fetch. ' +
+      'Example: new BitcoinCashOAuthClient({ fetch: axiosFetch })'
+    );
+  }
+  
+  // Check for hybrid app environments (Cordova, etc.)
+  if (isHybridApp() && !isCapacitor()) {
+    console.warn(
+      '[bitcoincash-oauth-client] Hybrid app environment detected. ' +
+      'Consider providing a custom fetch implementation via options.fetch ' +
+      'for better compatibility.'
+    );
+  }
+  
+  // Use global fetch if available (browser or Node.js 18+)
+  if (typeof fetch !== 'undefined') {
+    // Bind to globalThis to avoid Window issues in some environments
+    return fetch.bind(globalThis);
+  }
+  
+  throw new NetworkError(
+    'No fetch implementation available. ' +
+    'For Node.js < 18, install node-fetch and pass it as an option: ' +
+    'new BitcoinCashOAuthClient({ fetch: fetchImplementation })'
+  );
 }
