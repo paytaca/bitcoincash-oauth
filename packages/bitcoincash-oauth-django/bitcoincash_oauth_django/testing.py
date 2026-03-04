@@ -67,7 +67,7 @@ class OAuthTestCase(TestCase):
 
         user = User.objects.create_user(
             user_id=wallet_hash,
-            bitcoin_address=address,
+            bitcoincash_address=address,
             public_key=public_key,
             **kwargs,
         )

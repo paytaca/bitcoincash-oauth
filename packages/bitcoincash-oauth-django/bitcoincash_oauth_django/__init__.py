@@ -15,7 +15,6 @@ Quick Start:
        BITCOINCASH_OAUTH = {
            'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
            'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-           'REQUIRE_SIGNATURE_FOR_REGISTRATION': True,  # Security: verify ownership
        }
 
     5. Add authentication backend:
@@ -39,7 +38,7 @@ Example Usage:
 """
 
 # Version
-__version__ = "0.2.0"
+version = "0.2.5"
 
 # These modules don't depend on Django being initialized first
 # and can be safely imported at module level
@@ -79,7 +78,7 @@ _LAZY_MODULES = {
     "check_settings": (".settings", "check_settings"),
     # Utilities (has django.http imports)
     "get_wallet_hash": (".utils", "get_wallet_hash"),
-    "get_bitcoin_address": (".utils", "get_bitcoin_address"),
+    "get_bitcoincash_address": (".utils", "get_bitcoincash_address"),
     "get_oauth_scopes": (".utils", "get_oauth_scopes"),
     "has_scope": (".utils", "has_scope"),
     "get_current_token": (".utils", "get_current_token"),

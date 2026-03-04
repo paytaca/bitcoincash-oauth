@@ -14,17 +14,22 @@ from .token_manager import token_manager, TokenData
 
 # Serializers
 class RegisterSerializer(serializers.Serializer):
-    """Serializer for user registration"""
+    """Serializer for user registration with signature verification"""
 
-    address = serializers.CharField(required=True)
-    user_id = serializers.CharField(required=False, allow_null=True)
+    bitcoincash_address = serializers.CharField(required=True)
+    user_id = serializers.CharField(required=True)
+    # Signature fields (always required for security)
+    timestamp = serializers.IntegerField(required=True)
+    domain = serializers.CharField(required=False, default="oauth")
+    public_key = serializers.CharField(required=True)
+    signature = serializers.CharField(required=True)
 
 
 class RegisterResponseSerializer(serializers.Serializer):
     """Serializer for registration response"""
 
     user_id = serializers.CharField()
-    address = serializers.CharField()
+    bitcoincash_address = serializers.CharField()
     message = serializers.CharField()
 
 
@@ -67,7 +72,7 @@ class UserInfoSerializer(serializers.Serializer):
     """Serializer for user info response"""
 
     user_id = serializers.CharField()
-    address = serializers.CharField()
+    bitcoincash_address = serializers.CharField()
     scopes = serializers.ListField(child=serializers.CharField())
     expires_at = serializers.FloatField()
 
@@ -127,7 +132,7 @@ class HasScope(permissions.BasePermission):
 
 # DRF Views
 class RegisterView(APIView):
-    """DRF view for user registration"""
+    """DRF view for user registration with signature verification"""
 
     permission_classes = []
     authentication_classes = []
@@ -136,20 +141,38 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        address = serializer.validated_data["address"]
+        bitcoincash_address = serializer.validated_data["bitcoincash_address"]
         user_id = serializer.validated_data.get("user_id")
+        timestamp = serializer.validated_data["timestamp"]
+        domain = serializer.validated_data.get("domain", "oauth")
+        public_key = serializer.validated_data["public_key"]
+        signature = serializer.validated_data["signature"]
 
         # Validate CashAddr format
-        is_valid, network = BitcoinCashValidator.validate_cash_address(address)
+        is_valid, network = BitcoinCashValidator.validate_cash_address(
+            bitcoincash_address
+        )
         if not is_valid:
             raise ValidationError(
                 {
-                    "address": "Invalid Bitcoin Cash CashAddr format. Expected format: bitcoincash:qz..."
+                    "bitcoincash_address": "Invalid Bitcoin Cash CashAddr format. Expected format: bitcoincash:qz..."
                 }
             )
 
+        # Verify signature
+        is_valid_sig, reason = verify_bitcoin_cash_auth(
+            user_id=user_id,
+            timestamp=timestamp,
+            public_key=public_key,
+            signature=signature,
+            expected_address=bitcoincash_address,
+            domain=domain,
+        )
+        if not is_valid_sig:
+            raise AuthenticationFailed(f"Signature verification failed: {reason}")
+
         try:
-            user_id = token_manager.register_user(address, user_id)
+            user_id = token_manager.register_user(bitcoincash_address, user_id)
 
             is_new = user_id == user_id if user_id else True
             message = (
@@ -159,7 +182,11 @@ class RegisterView(APIView):
             )
 
             response_serializer = RegisterResponseSerializer(
-                data={"user_id": user_id, "address": address, "message": message}
+                data={
+                    "user_id": user_id,
+                    "bitcoincash_address": bitcoincash_address,
+                    "message": message,
+                }
             )
             response_serializer.is_valid()
 
@@ -281,12 +308,12 @@ class MeView(APIView):
 
     def get(self, request):
         token_data = request.token_data
-        address = token_manager.get_user_address(token_data.user_id)
+        bitcoincash_address = token_manager.get_user_address(token_data.user_id)
 
         serializer = UserInfoSerializer(
             data={
                 "user_id": token_data.user_id,
-                "address": address,
+                "bitcoincash_address": bitcoincash_address,
                 "scopes": token_data.scopes,
                 "expires_at": token_data.expires_at,
             }

@@ -25,7 +25,7 @@ Configuration (via environment variables):
     BITCOINCASH_OAUTH_REDIS_URL=redis://localhost:6379/0
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.3"
 
 # Core exports
 from .config import Settings, get_settings, reload_settings
@@ -69,7 +69,7 @@ from .dependencies import (
     has_scope,
     has_all_scopes,
     get_wallet_hash,
-    get_bitcoin_address,
+    get_bitcoincash_address,
     get_oauth_scopes,
     RequireOwner,
     RequireOwnerOrReadOnly,
@@ -191,7 +191,7 @@ __all__ = [
     "has_scope",
     "has_all_scopes",
     "get_wallet_hash",
-    "get_bitcoin_address",
+    "get_bitcoincash_address",
     "get_oauth_scopes",
     "RequireOwner",
     "RequireOwnerOrReadOnly",

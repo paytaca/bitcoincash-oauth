@@ -9,7 +9,7 @@ export interface Keypair {
   /** Hex-encoded compressed public key */
   publicKey: string;
   /** Bitcoin Cash address */
-  address: string;
+  bitcoincash_address: string;
 }
 
 export interface SecureStorage {
@@ -43,6 +43,8 @@ export interface AuthenticationResult {
 export interface RegistrationResult {
   /** Assigned user ID */
   user_id: string;
+  /** Bitcoin Cash address */
+  bitcoincash_address: string;
   /** Registration status message */
   message?: string;
 }
@@ -59,8 +61,15 @@ export class BitcoinCashOAuthClient {
   /** Convert public key to Bitcoin Cash CashAddr format */
   publicKeyToCashAddress(publicKey: Uint8Array): Promise<string>;
   
-  /** Register a new user with the server */
-  register(address: string, userId?: string | null): Promise<RegistrationResult>;
+  /** Register a new user with the server (signature required) */
+  register(
+    bitcoincash_address: string,
+    privateKeyHex: string,
+    publicKeyHex: string,
+    userId: string,
+    timestamp?: number | null,
+    domain?: string | null
+  ): Promise<RegistrationResult>;
   
   /** Create authentication message (protocol|domain|userId|timestamp) */
   createAuthMessage(userId: string, timestamp?: number | null, domain?: string | null): string;

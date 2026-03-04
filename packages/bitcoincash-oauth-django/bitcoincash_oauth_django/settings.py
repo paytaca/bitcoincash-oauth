@@ -20,8 +20,6 @@ DEFAULTS = {
     "DEFAULT_SCOPES": ["read"],
     # Network settings
     "NETWORK": "mainnet",  # or 'testnet'
-    # Registration settings
-    "REQUIRE_SIGNATURE_FOR_REGISTRATION": True,  # Security: require signature to prove ownership
     # Rate limiting (optional)
     "RATE_LIMIT": {
         "token_endpoint": "5/m",  # 5 per minute

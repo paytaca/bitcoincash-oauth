@@ -36,7 +36,7 @@ class BitcoinCashUser(Base):
         index=True,
         comment="Wallet hash or user-provided ID",
     )
-    bitcoin_address: Mapped[str] = mapped_column(
+    bitcoincash_address: Mapped[str] = mapped_column(
         String(100), unique=True, index=True, comment="Bitcoin Cash CashAddr address"
     )
     public_key: Mapped[Optional[str]] = mapped_column(
@@ -66,9 +66,7 @@ class BitcoinCashUser(Base):
     )
 
     def __repr__(self) -> str:
-        return (
-            f"<BitcoinCashUser(user_id={self.user_id}, address={self.bitcoin_address})>"
-        )
+        return f"<BitcoinCashUser(user_id={self.user_id}, address={self.bitcoincash_address})>"
 
     @property
     def wallet_hash(self) -> str:

@@ -45,22 +45,20 @@ security = HTTPBearer(auto_error=False)
 class RegisterRequest(BaseModel):
     """Request model for user registration"""
 
-    address: str = Field(..., description="Bitcoin Cash CashAddr address")
-    user_id: Optional[str] = Field(
-        None, description="Optional user-provided ID (wallet hash)"
-    )
-    # Optional signature fields for secure registration
-    timestamp: Optional[int] = Field(None, description="Unix timestamp for signature")
+    bitcoincash_address: str = Field(..., description="Bitcoin Cash CashAddr address")
+    user_id: str = Field(..., description="User-provided ID (wallet hash)")
+    # Signature fields (always required for security)
+    timestamp: int = Field(..., description="Unix timestamp for signature")
     domain: str = Field(default="oauth", description="Domain for message binding")
-    public_key: Optional[str] = Field(None, description="Hex-encoded public key")
-    signature: Optional[str] = Field(None, description="DER-encoded signature")
+    public_key: str = Field(..., description="Hex-encoded public key")
+    signature: str = Field(..., description="DER-encoded signature")
 
 
 class RegisterResponse(BaseModel):
     """Response model for registration"""
 
     user_id: str
-    address: str
+    bitcoincash_address: str
     message: str
     signature_required: bool = Field(
         False, description="Whether signature verification is required"
@@ -113,7 +111,7 @@ class UserInfoResponse(BaseModel):
     """Response model for user info"""
 
     user_id: str
-    address: str
+    bitcoincash_address: str
     scopes: List[str]
     expires_at: float
 
@@ -148,54 +146,43 @@ def create_oauth_router(
         response_model=RegisterResponse,
         status_code=status.HTTP_201_CREATED,
         summary="Register a new user",
-        description="Register a new user with a Bitcoin Cash address. If signature verification is enabled, proof of wallet ownership is required.",
+        description="Register a new user with a Bitcoin Cash address. Signature verification is always required to prove wallet ownership.",
     )
     async def register(
         request: Request, data: RegisterRequest, db: AsyncSession = Depends(get_db)
     ):
-        """Register a new user with optional signature verification"""
-        settings = get_settings()
-
+        """Register a new user with signature verification"""
         # Validate address format
-        is_valid, network = BitcoinCashValidator.validate_cash_address(data.address)
+        is_valid, network = BitcoinCashValidator.validate_cash_address(
+            data.bitcoincash_address
+        )
         if not is_valid:
             raise InvalidAddressError().to_http_exception()
 
-        # Check if signature verification is required
-        if settings.REQUIRE_SIGNATURE_FOR_REGISTRATION:
-            if not all([data.timestamp, data.public_key, data.signature]):
-                return RegisterResponse(
-                    user_id="",
-                    address=data.address,
-                    message="Signature verification required",
-                    signature_required=True,
-                )
+        # Signature verification is always required
+        is_valid_sig, reason = verify_bitcoin_cash_auth(
+            user_id=data.user_id,
+            timestamp=data.timestamp,
+            public_key=data.public_key,
+            signature=data.signature,
+            expected_address=data.bitcoincash_address,
+            domain=data.domain,
+        )
 
-            # Verify signature
-            user_id_for_sig = data.user_id or data.address
-            is_valid_sig, reason = verify_bitcoin_cash_auth(
-                user_id=user_id_for_sig,
-                timestamp=data.timestamp,
-                public_key=data.public_key,
-                signature=data.signature,
-                expected_address=data.address,
-                domain=data.domain,
+        if not is_valid_sig:
+            await emit_authentication_failed(
+                user_id=data.user_id,
+                reason=f"Registration signature failed: {reason}",
+                request=request,
             )
-
-            if not is_valid_sig:
-                await emit_authentication_failed(
-                    user_id=data.user_id,
-                    reason=f"Registration signature failed: {reason}",
-                    request=request,
-                )
-                raise InvalidSignatureError(
-                    f"Signature verification failed: {reason}"
-                ).to_http_exception()
+            raise InvalidSignatureError(
+                f"Signature verification failed: {reason}"
+            ).to_http_exception()
 
         # Check if user already exists by address
         result = await db.execute(
             select(get_user_model()).where(
-                get_user_model().bitcoin_address == data.address
+                get_user_model().bitcoincash_address == data.bitcoincash_address
             )
         )
         existing = result.scalar_one_or_none()
@@ -203,29 +190,28 @@ def create_oauth_router(
         if existing:
             return RegisterResponse(
                 user_id=existing.user_id,
-                address=data.address,
+                bitcoincash_address=data.bitcoincash_address,
                 message="User already exists, returning existing ID",
                 signature_required=False,
             )
 
         # Check if user_id is already taken
-        if data.user_id:
-            result = await db.execute(
-                select(get_user_model()).where(get_user_model().user_id == data.user_id)
+        result = await db.execute(
+            select(get_user_model()).where(get_user_model().user_id == data.user_id)
+        )
+        if result.scalar_one_or_none():
+            await emit_registration_failed(
+                address=data.bitcoincash_address,
+                reason=f"User ID already exists: {data.user_id}",
+                request=request,
             )
-            if result.scalar_one_or_none():
-                await emit_registration_failed(
-                    address=data.address,
-                    reason=f"User ID already exists: {data.user_id}",
-                    request=request,
-                )
-                raise UserAlreadyExistsError().to_http_exception()
+            raise UserAlreadyExistsError().to_http_exception()
 
         try:
             # Create new user
             user = get_user_model()(
-                user_id=data.user_id or data.address,
-                bitcoin_address=data.address,
+                user_id=data.user_id,
+                bitcoincash_address=data.bitcoincash_address,
                 public_key=data.public_key or "",
             )
             db.add(user)
@@ -236,14 +222,14 @@ def create_oauth_router(
 
             return RegisterResponse(
                 user_id=user.user_id,
-                address=data.address,
+                bitcoincash_address=data.bitcoincash_address,
                 message="User registered successfully",
                 signature_required=False,
             )
 
         except Exception as e:
             await emit_registration_failed(
-                address=data.address, reason=str(e), request=request
+                address=data.bitcoincash_address, reason=str(e), request=request
             )
             raise RegistrationError(str(e)).to_http_exception()
 
@@ -276,7 +262,7 @@ def create_oauth_router(
             timestamp=data.timestamp,
             public_key=data.public_key,
             signature=data.signature,
-            expected_address=user.bitcoin_address,
+            expected_address=user.bitcoincash_address,
             domain=data.domain,
         )
 
@@ -443,7 +429,7 @@ def create_oauth_router(
 
         return UserInfoResponse(
             user_id=user.user_id,
-            address=user.bitcoin_address,
+            bitcoincash_address=user.bitcoincash_address,
             scopes=token.scopes,
             expires_at=token.expires_at.timestamp(),
         )

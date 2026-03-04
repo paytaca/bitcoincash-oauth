@@ -180,5 +180,5 @@ Example Usage:
     @oauth_events.on("user_registered")
     async def welcome_new_user(user, request):
         # Send welcome email
-        await send_welcome_email(user.bitcoin_address)
+        await send_welcome_email(user.bitcoincash_address)
 """

@@ -57,10 +57,10 @@ async function runTests() {
     keypair = await client.generateKeypair();
     console.log('  ✓ Private Key:', keypair.privateKey.substring(0, 20) + '...');
     console.log('  ✓ Public Key:', keypair.publicKey.substring(0, 20) + '...');
-    console.log('  ✓ Address:', keypair.address);
+    console.log('  ✓ Address:', keypair.bitcoincash_address);
     
     // Validate address format
-    if (keypair.address.startsWith('bitcoincash:') || keypair.address.startsWith('bchtest:')) {
+    if (keypair.bitcoincash_address.startsWith('bitcoincash:') || keypair.bitcoincash_address.startsWith('bchtest:')) {
       console.log('  ✓ Address format is valid');
       passed++;
     } else {

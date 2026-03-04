@@ -25,7 +25,7 @@ class BitcoinCashUserAdmin(admin.ModelAdmin):
 
     list_display = [
         "user_id",
-        "bitcoin_address",
+        "bitcoincash_address",
         "is_active",
         "is_staff",
         "date_joined",
@@ -42,7 +42,7 @@ class BitcoinCashUserAdmin(admin.ModelAdmin):
 
     search_fields = [
         "user_id",
-        "bitcoin_address",
+        "bitcoincash_address",
         "public_key",
     ]
 
@@ -53,7 +53,10 @@ class BitcoinCashUserAdmin(admin.ModelAdmin):
     ]
 
     fieldsets = (
-        ("User Information", {"fields": ("user_id", "bitcoin_address", "public_key")}),
+        (
+            "User Information",
+            {"fields": ("user_id", "bitcoincash_address", "public_key")},
+        ),
         (
             "Permissions",
             {
@@ -140,7 +143,7 @@ class OAuthTokenAdmin(admin.ModelAdmin):
 
     search_fields = [
         "user__user_id",
-        "user__bitcoin_address",
+        "user__bitcoincash_address",
         "access_token",
         "refresh_token",
     ]

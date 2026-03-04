@@ -175,7 +175,7 @@ async def get_wallet_hash(user=Depends(get_current_user)) -> str:
     return user.user_id
 
 
-async def get_bitcoin_address(
+async def get_bitcoincash_address(
     user=Depends(get_current_user),
 ) -> str:
     """
@@ -183,10 +183,10 @@ async def get_bitcoin_address(
 
     Usage:
         @app.get("/address")
-        async def get_address(address: str = Depends(get_bitcoin_address)):
+        async def get_address(address: str = Depends(get_bitcoincash_address)):
             return {"address": address}
     """
-    return user.bitcoin_address
+    return user.bitcoincash_address
 
 
 async def get_oauth_scopes(token=Depends(get_current_token)) -> List[str]:

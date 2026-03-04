@@ -32,20 +32,37 @@ class BitcoinCashOAuthViews:
 
     @method_decorator(csrf_exempt)
     def register_view(self, request):
-        """Handle user registration"""
+        """Handle user registration with signature verification"""
         if request.method != "POST":
             return JsonResponse({"error": "Method not allowed"}, status=405)
 
         try:
             data = json.loads(request.body)
-            address = data.get("address")
+            bitcoincash_address = data.get("bitcoincash_address")
             user_id = data.get("user_id")
+            timestamp = data.get("timestamp")
+            domain = data.get("domain", "oauth")
+            public_key = data.get("public_key")
+            signature = data.get("signature")
 
-            if not address:
-                return JsonResponse({"error": "address is required"}, status=400)
+            # Validate required fields
+            if not bitcoincash_address:
+                return JsonResponse(
+                    {"error": "bitcoincash_address is required"}, status=400
+                )
+            if not user_id:
+                return JsonResponse({"error": "user_id is required"}, status=400)
+            if not timestamp:
+                return JsonResponse({"error": "timestamp is required"}, status=400)
+            if not public_key:
+                return JsonResponse({"error": "public_key is required"}, status=400)
+            if not signature:
+                return JsonResponse({"error": "signature is required"}, status=400)
 
             # Validate CashAddr format
-            is_valid, network = BitcoinCashValidator.validate_cash_address(address)
+            is_valid, network = BitcoinCashValidator.validate_cash_address(
+                bitcoincash_address
+            )
             if not is_valid:
                 return JsonResponse(
                     {
@@ -54,8 +71,23 @@ class BitcoinCashOAuthViews:
                     status=400,
                 )
 
+            # Verify signature
+            is_valid_sig, reason = verify_bitcoin_cash_auth(
+                user_id=user_id,
+                timestamp=timestamp,
+                public_key=public_key,
+                signature=signature,
+                expected_address=bitcoincash_address,
+                domain=domain,
+            )
+            if not is_valid_sig:
+                return JsonResponse(
+                    {"error": f"Signature verification failed: {reason}"},
+                    status=401,
+                )
+
             try:
-                user_id = self.token_manager.register_user(address, user_id)
+                user_id = self.token_manager.register_user(bitcoincash_address, user_id)
 
                 is_new = user_id == user_id if user_id else True
                 message = (
@@ -65,7 +97,11 @@ class BitcoinCashOAuthViews:
                 )
 
                 return JsonResponse(
-                    {"user_id": user_id, "address": address, "message": message}
+                    {
+                        "user_id": user_id,
+                        "bitcoincash_address": bitcoincash_address,
+                        "message": message,
+                    }
                 )
 
             except ValueError as e:
@@ -201,12 +237,12 @@ class BitcoinCashOAuthViews:
         if not token_data:
             return JsonResponse({"error": "Invalid or expired token"}, status=401)
 
-        address = self.token_manager.get_user_address(token_data.user_id)
+        bitcoincash_address = self.token_manager.get_user_address(token_data.user_id)
 
         return JsonResponse(
             {
                 "user_id": token_data.user_id,
-                "address": address,
+                "bitcoincash_address": bitcoincash_address,
                 "scopes": token_data.scopes,
                 "expires_at": token_data.expires_at,
             }

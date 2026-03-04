@@ -42,7 +42,7 @@ export {
  * @typedef {Object} Keypair
  * @property {string} privateKey - Hex-encoded private key
  * @property {string} publicKey - Hex-encoded compressed public key
- * @property {string} address - Bitcoin Cash address
+ * @property {string} bitcoincash_address - Bitcoin Cash address
  */
 
 /**
@@ -156,14 +156,14 @@ export class BitcoinCashOAuthClient {
     const publicKeyBytes = this.secp256k1.derivePublicKeyCompressed(privateKeyBytes);
     
     // Convert to address
-    const address = await this.publicKeyToCashAddress(publicKeyBytes);
-
-    this._log('Generated new keypair', { address });
+    const bitcoincash_address = await this.publicKeyToCashAddress(publicKeyBytes);
+    
+    this._log('Generated new keypair', { bitcoincash_address });
 
     return {
       privateKey: this.bytesToHex(privateKeyBytes),
       publicKey: this.bytesToHex(publicKeyBytes),
-      address,
+      bitcoincash_address,
     };
   }
 
@@ -217,40 +217,55 @@ export class BitcoinCashOAuthClient {
   }
 
   /**
-   * Register a new user with the server
-   * @param {string} address - Bitcoin Cash address
-   * @param {string} [userId] - Optional user-provided ID
+   * Register a new user with the server (signature required)
+   * @param {string} bitcoincash_address - Bitcoin Cash address
+   * @param {string} privateKeyHex - Private key for signing (hex-encoded)
+   * @param {string} publicKeyHex - Public key for signature verification (hex-encoded)
+   * @param {string} userId - User-provided ID (required)
+   * @param {number} [timestamp] - Optional Unix timestamp (defaults to now)
+   * @param {string} [domain] - Optional domain for message binding
    * @returns {Promise<Object>} Registration result with assigned userId
    * @throws {NetworkError} If network request fails
    * @throws {AuthenticationError} If registration fails
    */
-  async register(address, userId = null) {
+  async register(bitcoincash_address, privateKeyHex, publicKeyHex, userId, timestamp = null, domain = null) {
     try {
+      const ts = timestamp || Math.floor(Date.now() / 1000);
+      const host = domain || this._getDefaultDomain();
+      const message = this.createAuthMessage(userId, ts, host);
+      const signature = await this.signAuthMessage(message, privateKeyHex);
+
+      this._log('Registering user', { bitcoincash_address, userId, domain: host });
+
       const response = await this.fetchImpl(`${this.serverUrl}/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          address,
+          bitcoincash_address,
           user_id: userId,
+          timestamp: ts,
+          domain: host,
+          public_key: publicKeyHex,
+          signature: signature,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        
+
         if (response.status === 404) {
           throw new UserNotFoundError(errorData.detail || 'User not found');
         }
-        
+
         throw new AuthenticationError(
           errorData.detail || `Registration failed: ${response.statusText}`,
           response.status
         );
       }
 
-      this._log('User registered successfully', { address, userId });
+      this._log('User registered successfully', { bitcoincash_address, userId });
       return await response.json();
     } catch (error) {
       if (error instanceof OAuthError) {

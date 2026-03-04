@@ -49,7 +49,7 @@ def get_wallet_hash(request):
     return None
 
 
-def get_bitcoin_address(request):
+def get_bitcoincash_address(request):
     """
     Get the Bitcoin Cash address from an authenticated request
 
@@ -65,11 +65,11 @@ def get_bitcoin_address(request):
     UserModel = _get_user_model()
 
     if isinstance(request.user, UserModel):
-        return request.user.bitcoin_address
+        return request.user.bitcoincash_address
 
     # Try to get from user model
-    if hasattr(request.user, "bitcoin_address"):
-        return request.user.bitcoin_address
+    if hasattr(request.user, "bitcoincash_address"):
+        return request.user.bitcoincash_address
 
     return None
 
@@ -229,7 +229,7 @@ class WalletHashExtractor:
     def __call__(self, request):
         # Extract wallet hash and attach to request
         request.wallet_hash = get_wallet_hash(request)
-        request.bitcoin_address = get_bitcoin_address(request)
+        request.bitcoincash_address = get_bitcoincash_address(request)
         request.oauth_scopes = get_oauth_scopes(request)
 
         response = self.get_response(request)

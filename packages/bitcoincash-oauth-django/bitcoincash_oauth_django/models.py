@@ -20,21 +20,21 @@ from django.contrib.auth.models import (
 class BitcoinCashUserManager(BaseUserManager):
     """Custom user manager for Bitcoin Cash OAuth users"""
 
-    def create_user(self, user_id, bitcoin_address, **extra_fields):
-        """Create and save a user with the given user_id and bitcoin_address"""
+    def create_user(self, user_id, bitcoincash_address, **extra_fields):
+        """Create and save a user with the given user_id and bitcoincash_address"""
         if not user_id:
             raise ValueError("The user_id must be set")
-        if not bitcoin_address:
-            raise ValueError("The bitcoin_address must be set")
+        if not bitcoincash_address:
+            raise ValueError("The bitcoincash_address must be set")
 
         user = self.model(
-            user_id=user_id, bitcoin_address=bitcoin_address, **extra_fields
+            user_id=user_id, bitcoincash_address=bitcoincash_address, **extra_fields
         )
         user.set_unusable_password()  # OAuth users don't use passwords
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, user_id, bitcoin_address, **extra_fields):
+    def create_superuser(self, user_id, bitcoincash_address, **extra_fields):
         """Create and save a superuser"""
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
@@ -45,7 +45,7 @@ class BitcoinCashUserManager(BaseUserManager):
         if extra_fields.get("is_superuser") is not True:
             raise ValueError("Superuser must have is_superuser=True.")
 
-        return self.create_user(user_id, bitcoin_address, **extra_fields)
+        return self.create_user(user_id, bitcoincash_address, **extra_fields)
 
 
 class BitcoinCashUser(AbstractBaseUser, PermissionsMixin):
@@ -65,7 +65,7 @@ class BitcoinCashUser(AbstractBaseUser, PermissionsMixin):
     )
 
     # Bitcoin Cash address
-    bitcoin_address = models.CharField(
+    bitcoincash_address = models.CharField(
         max_length=100,
         unique=True,
         help_text="Bitcoin Cash CashAddr address",
@@ -104,7 +104,7 @@ class BitcoinCashUser(AbstractBaseUser, PermissionsMixin):
 
     # Django auth configuration
     USERNAME_FIELD = "user_id"
-    REQUIRED_FIELDS = ["bitcoin_address"]
+    REQUIRED_FIELDS = ["bitcoincash_address"]
 
     objects = BitcoinCashUserManager()
 
@@ -115,7 +115,7 @@ class BitcoinCashUser(AbstractBaseUser, PermissionsMixin):
         ordering = ["-date_joined"]
 
     def __str__(self):
-        return f"{self.user_id} ({self.bitcoin_address})"
+        return f"{self.user_id} ({self.bitcoincash_address})"
 
     def get_full_name(self):
         return self.user_id

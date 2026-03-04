@@ -51,30 +51,30 @@ def _get_token_model():
 class RegisterSerializer(serializers.Serializer):
     """Serializer for user registration with signature verification"""
 
-    address = serializers.CharField(
+    bitcoincash_address = serializers.CharField(
         required=True, help_text="Bitcoin Cash CashAddr address"
     )
     user_id = serializers.CharField(
-        required=False, allow_null=True, help_text="Optional user-provided ID"
+        required=True, help_text="User-provided ID (wallet hash)"
     )
-    # Signature fields for secure registration
+    # Signature fields (always required for security)
     timestamp = serializers.IntegerField(
-        required=False, help_text="Unix timestamp for signature"
+        required=True, help_text="Unix timestamp for signature"
     )
     domain = serializers.CharField(
         required=False, default="oauth", help_text="Domain for message binding"
     )
     public_key = serializers.CharField(
-        required=False, help_text="Hex-encoded public key"
+        required=True, help_text="Hex-encoded public key"
     )
-    signature = serializers.CharField(required=False, help_text="DER-encoded signature")
+    signature = serializers.CharField(required=True, help_text="DER-encoded signature")
 
 
 class RegisterResponseSerializer(serializers.Serializer):
     """Serializer for registration response"""
 
     user_id = serializers.CharField()
-    address = serializers.CharField()
+    bitcoincash_address = serializers.CharField()
     message = serializers.CharField()
     signature_required = serializers.BooleanField(required=False)
 
@@ -119,7 +119,7 @@ class UserInfoSerializer(serializers.Serializer):
     """Serializer for user info response"""
 
     user_id = serializers.CharField()
-    address = serializers.CharField()
+    bitcoincash_address = serializers.CharField()
     scopes = serializers.ListField(child=serializers.CharField())
     expires_at = serializers.FloatField()
 
@@ -237,16 +237,16 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 # DRF Views
 class RegisterView(APIView):
     """
-    DRF view for user registration with optional signature verification
+    DRF view for user registration with signature verification
 
     POST /auth/register
     {
-        "address": "bitcoincash:qz...",
+        "bitcoincash_address": "bitcoincash:qz...",
         "user_id": "optional_wallet_hash",
-        "timestamp": 1234567890,  # Required if signature verification enabled
+        "timestamp": 1234567890,  # Required
         "domain": "oauth",        # Optional
-        "public_key": "02...",    # Required if signature verification enabled
-        "signature": "3045..."    # Required if signature verification enabled
+        "public_key": "02...",    # Required
+        "signature": "3045..."    # Required
     }
     """
 
@@ -257,72 +257,67 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        address = serializer.validated_data["address"]
+        bitcoincash_address = serializer.validated_data["bitcoincash_address"]
         user_id = serializer.validated_data.get("user_id")
 
-        settings = get_settings()
-
         # Validate CashAddr format
-        is_valid, network = BitcoinCashValidator.validate_cash_address(address)
+        is_valid, network = BitcoinCashValidator.validate_cash_address(
+            bitcoincash_address
+        )
         if not is_valid:
             raise ValidationError(
                 {
-                    "address": "Invalid Bitcoin Cash CashAddr format. Expected format: bitcoincash:qz..."
+                    "bitcoincash_address": "Invalid Bitcoin Cash CashAddr format. Expected format: bitcoincash:qz..."
                 }
             )
 
-        # Check if signature verification is required
-        if settings.REQUIRE_SIGNATURE_FOR_REGISTRATION:
-            timestamp = serializer.validated_data.get("timestamp")
-            public_key = serializer.validated_data.get("public_key")
-            signature = serializer.validated_data.get("signature")
-            domain = serializer.validated_data.get("domain", "oauth")
+        # Signature verification is always required
+        timestamp = serializer.validated_data.get("timestamp")
+        public_key = serializer.validated_data.get("public_key")
+        signature = serializer.validated_data.get("signature")
+        domain = serializer.validated_data.get("domain", "oauth")
 
-            if not all([timestamp, public_key, signature]):
-                return Response(
-                    {
-                        "error": "Signature verification required",
-                        "message": "Registration requires signature verification. Please provide timestamp, public_key, and signature.",
-                        "signature_required": True,
-                    },
-                    status=status.HTTP_401_UNAUTHORIZED,
-                )
+        # Verify signature
+        is_valid_sig, reason = verify_bitcoin_cash_auth(
+            user_id=user_id,
+            timestamp=timestamp,
+            public_key=public_key,
+            signature=signature,
+            expected_address=bitcoincash_address,
+            domain=domain,
+        )
 
-            # Verify signature
-            is_valid_sig, reason = verify_bitcoin_cash_auth(
-                user_id=user_id or address,  # Use address as fallback if no user_id
-                timestamp=timestamp,
-                public_key=public_key,
-                signature=signature,
-                expected_address=address,
-                domain=domain,
+        if not is_valid_sig:
+            authentication_failed.send(
+                sender=self.__class__,
+                user_id=user_id,
+                reason=f"Registration signature failed: {reason}",
+                request=request,
             )
-
-            if not is_valid_sig:
-                authentication_failed.send(
-                    sender=self.__class__,
-                    user_id=user_id,
-                    reason=f"Registration signature failed: {reason}",
-                    request=request,
-                )
-                raise AuthenticationFailed(f"Signature verification failed: {reason}")
+            raise AuthenticationFailed(f"Signature verification failed: {reason}")
 
         # Check if user already exists
-        if user_id and _get_user_model().objects.filter(user_id=user_id).exists():
+        if _get_user_model().objects.filter(user_id=user_id).exists():
             registration_failed.send(
                 sender=self.__class__,
-                address=address,
+                address=bitcoincash_address,
                 reason=f"User ID already exists: {user_id}",
                 request=request,
             )
             raise ValidationError({"user_id": "User ID already exists"})
 
-        if _get_user_model().objects.filter(bitcoin_address=address).exists():
-            existing = _get_user_model().objects.get(bitcoin_address=address)
+        if (
+            _get_user_model()
+            .objects.filter(bitcoincash_address=bitcoincash_address)
+            .exists()
+        ):
+            existing = _get_user_model().objects.get(
+                bitcoincash_address=bitcoincash_address
+            )
             return Response(
                 {
                     "user_id": existing.user_id,
-                    "address": address,
+                    "bitcoincash_address": bitcoincash_address,
                     "message": "User already exists, returning existing ID",
                 }
             )
@@ -331,7 +326,7 @@ class RegisterView(APIView):
             # Create user
             user = _get_user_model().objects.create_user(
                 user_id=user_id,
-                bitcoin_address=address,
+                bitcoincash_address=bitcoincash_address,
                 public_key=serializer.validated_data.get("public_key", ""),
             )
 
@@ -341,7 +336,7 @@ class RegisterView(APIView):
             response_serializer = RegisterResponseSerializer(
                 data={
                     "user_id": user.user_id,
-                    "address": address,
+                    "bitcoincash_address": bitcoincash_address,
                     "message": "User registered successfully",
                 }
             )
@@ -351,7 +346,10 @@ class RegisterView(APIView):
 
         except Exception as e:
             registration_failed.send(
-                sender=self.__class__, address=address, reason=str(e), request=request
+                sender=self.__class__,
+                address=bitcoincash_address,
+                reason=str(e),
+                request=request,
             )
             raise ValidationError({"error": str(e)})
 
@@ -408,7 +406,7 @@ class TokenView(APIView):
             raise NotFound("User not found. Please register first.")
 
         # Get expected address
-        expected_address = user.bitcoin_address
+        expected_address = user.bitcoincash_address
 
         # Validate authentication
         is_valid, reason = verify_bitcoin_cash_auth(
@@ -643,7 +641,7 @@ class MeView(APIView):
         serializer = UserInfoSerializer(
             data={
                 "user_id": user.user_id,
-                "address": user.bitcoin_address,
+                "bitcoincash_address": user.bitcoincash_address,
                 "scopes": token.scopes,
                 "expires_at": token.expires_at.timestamp(),
             }

@@ -55,12 +55,6 @@ class Settings(BaseSettings):
         default=["read"], description="Default OAuth scopes for new tokens"
     )
 
-    # Security settings
-    REQUIRE_SIGNATURE_FOR_REGISTRATION: bool = Field(
-        default=True,
-        description="Require signature verification for registration (prevents wallet squatting)",
-    )
-
     # Network settings
     NETWORK: str = Field(
         default="mainnet",

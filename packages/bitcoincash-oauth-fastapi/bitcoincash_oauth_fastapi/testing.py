@@ -102,7 +102,7 @@ class OAuthTestClient:
         """
         user = get_user_model()(
             user_id=wallet_hash,
-            bitcoin_address=address,
+            bitcoincash_address=address,
             public_key=public_key,
             is_active=is_active,
         )

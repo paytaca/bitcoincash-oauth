@@ -61,14 +61,14 @@ class Command(BaseCommand):
         if _get_user_model().objects.filter(user_id=wallet_hash).exists():
             raise CommandError(f'User with wallet hash "{wallet_hash}" already exists')
 
-        if _get_user_model().objects.filter(bitcoin_address=address).exists():
+        if _get_user_model().objects.filter(bitcoincash_address=address).exists():
             raise CommandError(f'User with address "{address}" already exists')
 
         # Create user
         try:
             user = _get_user_model().objects.create_user(
                 user_id=wallet_hash,
-                bitcoin_address=address,
+                bitcoincash_address=address,
                 public_key=public_key or "",
                 is_staff=is_staff,
                 is_superuser=is_superuser,
@@ -77,7 +77,7 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.SUCCESS(f"Successfully created user: {user.user_id}")
             )
-            self.stdout.write(f"  Address: {user.bitcoin_address}")
+            self.stdout.write(f"  Address: {user.bitcoincash_address}")
             self.stdout.write(f"  Network: {network}")
 
             if is_staff:

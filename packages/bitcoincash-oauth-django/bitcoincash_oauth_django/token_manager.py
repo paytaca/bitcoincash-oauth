@@ -44,8 +44,8 @@ class TokenManager:
         self._refresh_tokens: Dict[str, str] = {}  # refresh_token -> access_token
         self._user_tokens: Dict[str, Set[str]] = {}  # user_id -> set of access_tokens
         self._revoked_tokens: Set[str] = set()
-        self._address_to_user: Dict[str, str] = {}  # bitcoin_address -> user_id
-        self._user_to_address: Dict[str, str] = {}  # user_id -> bitcoin_address
+        self._address_to_user: Dict[str, str] = {}  # bitcoincash_address -> user_id
+        self._user_to_address: Dict[str, str] = {}  # user_id -> bitcoincash_address
 
     def _generate_token(self) -> str:
         """Generate a cryptographically secure random token"""
@@ -55,20 +55,22 @@ class TokenManager:
         """Generate a unique user ID"""
         return f"user_{uuid.uuid4().hex[:16]}"
 
-    def register_user(self, bitcoin_address: str, user_id: Optional[str] = None) -> str:
+    def register_user(
+        self, bitcoincash_address: str, user_id: Optional[str] = None
+    ) -> str:
         """
         Register a new user with a Bitcoin Cash address
 
         Args:
-            bitcoin_address: The Bitcoin Cash address
+            bitcoincash_address: The Bitcoin Cash address
             user_id: Optional user-provided ID (if None, generates one)
 
         Returns:
             The user_id
         """
         # Check if address already registered
-        if bitcoin_address in self._address_to_user:
-            return self._address_to_user[bitcoin_address]
+        if bitcoincash_address in self._address_to_user:
+            return self._address_to_user[bitcoincash_address]
 
         # Use provided ID or generate one
         if user_id is None:
@@ -77,8 +79,8 @@ class TokenManager:
             raise ValueError(f"User ID '{user_id}' already exists")
 
         # Store mappings
-        self._address_to_user[bitcoin_address] = user_id
-        self._user_to_address[user_id] = bitcoin_address
+        self._address_to_user[bitcoincash_address] = user_id
+        self._user_to_address[user_id] = bitcoincash_address
         self._user_tokens[user_id] = set()
 
         return user_id

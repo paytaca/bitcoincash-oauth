@@ -178,7 +178,7 @@ class HasWalletAddress(permissions.BasePermission):
 
             def post(self, request):
                 # User has a BCH address, can proceed
-                address = request.user.bitcoin_address
+                address = request.user.bitcoincash_address
                 pass
     """
 
@@ -187,7 +187,8 @@ class HasWalletAddress(permissions.BasePermission):
             return False
 
         return bool(
-            hasattr(request.user, "bitcoin_address") and request.user.bitcoin_address
+            hasattr(request.user, "bitcoincash_address")
+            and request.user.bitcoincash_address
         )
 
 
