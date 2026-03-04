@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bitcoincash-oauth-fastapi"
-version = "0.1.1"
-description = "Bitcoin Cash OAuth authentication for FastAPI"
+version = "2.0.0"
+description = "Bitcoin Cash OAuth authentication for FastAPI with database persistence"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
@@ -25,22 +25,68 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Security :: Cryptography",
 ]
-keywords = ["bitcoin", "bitcoin-cash", "oauth", "authentication", "fastapi", "ecdsa"]
+keywords = ["bitcoin", "bitcoin-cash", "oauth", "authentication", "fastapi", "ecdsa", "sqlalchemy"]
 requires-python = ">=3.8"
 dependencies = [
+    # FastAPI
     "fastapi>=0.100.0",
+    
+    # Bitcoin Cash
     "coincurve>=18.0.0",
     "cashaddress>=1.0.6",
-    "python-jose[cryptography]>=3.3.0",
+    
+    # Pydantic
     "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    
+    # Database (SQLAlchemy async)
+    "sqlalchemy[asyncio]>=2.0.0",
+    "aiosqlite>=0.19.0",  # SQLite async driver (default)
+    
+    # JWT (kept for backwards compatibility)
+    "python-jose[cryptography]>=3.3.0",
 ]
 
 [project.optional-dependencies]
+# PostgreSQL support
+postgresql = [
+    "asyncpg>=0.28.0",
+]
+
+# MySQL support
+mysql = [
+    "aiomysql>=0.2.0",
+]
+
+# Redis for token blacklist
+redis = [
+    "redis>=5.0.0",
+]
+
+# All database drivers
+all = [
+    "asyncpg>=0.28.0",
+    "aiomysql>=0.2.0",
+    "redis>=5.0.0",
+]
+
+# Development dependencies
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
-    "uvicorn>=0.20.0",
     "httpx>=0.24.0",
+    "uvicorn>=0.20.0",
+]
+
+# Full development setup
+dev-all = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "httpx>=0.24.0",
+    "uvicorn>=0.20.0",
+    "asyncpg>=0.28.0",
+    "aiomysql>=0.2.0",
+    "redis>=5.0.0",
 ]
 
 [project.urls]
