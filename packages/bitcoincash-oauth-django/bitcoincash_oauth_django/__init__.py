@@ -151,6 +151,19 @@ from .permissions import (
     IsSuperUser,
 )
 
+# Middleware
+from .middleware import (
+    TokenValidationMiddleware,
+    TokenExpiryHeaderMiddleware,
+    TokenBlacklistMiddleware,
+)
+
+# Testing utilities
+from .testing import (
+    OAuthTestCase,
+    MockSignatureVerifier,
+)
+
 # Default app config for Django
 default_app_config = "bitcoincash_oauth_django.apps.BitcoinCashOAuthConfig"
 
@@ -234,4 +247,11 @@ __all__ = [
     "HasWalletAddress",
     "IsStaff",
     "IsSuperUser",
+    # Middleware
+    "TokenValidationMiddleware",
+    "TokenExpiryHeaderMiddleware",
+    "TokenBlacklistMiddleware",
+    # Testing
+    "OAuthTestCase",
+    "MockSignatureVerifier",
 ]

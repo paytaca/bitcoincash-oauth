@@ -542,18 +542,24 @@ class RefreshView(APIView):
 
 class RevokeView(APIView):
     """
-    DRF view for token revocation
+    DRF view for token revocation with blacklist support
 
     POST /auth/revoke
     {
         "token": "access_token_to_revoke"
     }
+
+    The revoked token is added to a blacklist for immediate invalidation
+    across all workers (even before database replication completes).
     """
 
     permission_classes = []
     authentication_classes = []
 
     def post(self, request):
+        from django.core.cache import cache
+        from datetime import timedelta
+
         serializer = RevokeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -570,14 +576,44 @@ class RevokeView(APIView):
                 raise NotFound("Token not found")
 
         user = oauth_token.user
+
+        # Calculate how long to blacklist (until token would naturally expire)
+        if oauth_token.expires_at:
+            from django.utils import timezone
+
+            expires_in = (oauth_token.expires_at - timezone.now()).total_seconds()
+            blacklist_duration = max(int(expires_in), 3600)  # Min 1 hour
+        else:
+            blacklist_duration = 86400  # 24 hours default
+
+        # Revoke in database
         oauth_token.revoke()
+
+        # Add to blacklist for immediate effect across all workers
+        blacklist_key = f"bitcoincash_token_blacklist_{token[:32]}"
+        cache.set(blacklist_key, True, blacklist_duration)
+
+        # Also blacklist the refresh token
+        if oauth_token.refresh_token:
+            refresh_blacklist_key = (
+                f"bitcoincash_token_blacklist_{oauth_token.refresh_token[:32]}"
+            )
+            cache.set(
+                refresh_blacklist_key, True, blacklist_duration * 7
+            )  # Refresh tokens live longer
 
         # Send signal
         token_revoked.send(
             sender=self.__class__, user=user, token=oauth_token, request=request
         )
 
-        return Response({"message": "Token revoked successfully"})
+        return Response(
+            {
+                "message": "Token revoked successfully",
+                "user_id": user.user_id,
+                "revoked_at": timezone.now().isoformat(),
+            }
+        )
 
 
 class MeView(APIView):

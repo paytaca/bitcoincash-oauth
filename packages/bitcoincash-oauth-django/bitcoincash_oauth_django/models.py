@@ -234,7 +234,22 @@ class OAuthToken(models.Model):
 
     @classmethod
     def validate_access_token(cls, access_token):
-        """Validate an access token and return the token object"""
+        """
+        Validate an access token and return the token object
+
+        Checks:
+        - Token exists in database
+        - Token is not revoked
+        - Token is not expired
+        - Token is not in the blacklist (cache)
+        """
+        # Check blacklist first (fast cache lookup)
+        from django.core.cache import cache
+
+        blacklist_key = f"bitcoincash_token_blacklist_{access_token[:32]}"
+        if cache.get(blacklist_key):
+            return None
+
         try:
             token = cls.objects.select_related("user").get(
                 access_token=access_token,
@@ -250,7 +265,22 @@ class OAuthToken(models.Model):
 
     @classmethod
     def validate_refresh_token(cls, refresh_token):
-        """Validate a refresh token and return the token object"""
+        """
+        Validate a refresh token and return the token object
+
+        Checks:
+        - Token exists in database
+        - Token is not revoked
+        - Token is not expired
+        - Token is not in the blacklist (cache)
+        """
+        # Check blacklist first
+        from django.core.cache import cache
+
+        blacklist_key = f"bitcoincash_token_blacklist_{refresh_token[:32]}"
+        if cache.get(blacklist_key):
+            return None
+
         try:
             token = cls.objects.select_related("user").get(
                 refresh_token=refresh_token,
