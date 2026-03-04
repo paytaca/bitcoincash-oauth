@@ -12,6 +12,8 @@ from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
     PermissionsMixin,
+    Group,
+    Permission,
 )
 
 
@@ -80,6 +82,24 @@ class BitcoinCashUser(AbstractBaseUser, PermissionsMixin):
         max_length=132,
         blank=True,
         help_text="Optional: Store user's public key for verification",
+    )
+
+    # Explicit related_name to avoid conflicts with auth.User
+    groups = models.ManyToManyField(
+        Group,
+        verbose_name="groups",
+        blank=True,
+        help_text="The groups this user belongs to.",
+        related_name="bitcoincashuser_groups",
+        related_query_name="bitcoincashuser",
+    )
+    user_permissions = models.ManyToManyField(
+        Permission,
+        verbose_name="user permissions",
+        blank=True,
+        help_text="Specific permissions for this user.",
+        related_name="bitcoincashuser_user_permissions",
+        related_query_name="bitcoincashuser",
     )
 
     # Django auth configuration
