@@ -7,7 +7,17 @@ Usage:
 """
 
 from django.core.management.base import BaseCommand, CommandError
-from bitcoincash_oauth_django.models import OAuthToken, BitcoinCashUser
+from bitcoincash_oauth_django.settings import get_settings
+
+
+def _get_user_model():
+    """Get the user model class"""
+    return get_settings().get_user_model()
+
+
+def _get_token_model():
+    """Get the token model class"""
+    return get_settings().get_token_model()
 
 
 class Command(BaseCommand):
@@ -43,13 +53,13 @@ class Command(BaseCommand):
 
         # Revoke specific token
         if token:
-            oauth_token = OAuthToken.validate_access_token(token)
+            oauth_token = _get_token_model().validate_access_token(token)
 
             if oauth_token is None:
                 # Try to find it anyway (might be expired)
                 try:
-                    oauth_token = OAuthToken.objects.get(access_token=token)
-                except OAuthToken.DoesNotExist:
+                    oauth_token = _get_token_model().objects.get(access_token=token)
+                except _get_token_model().DoesNotExist:
                     raise CommandError(f"Token not found: {token}")
 
             oauth_token.revoke()
@@ -63,11 +73,11 @@ class Command(BaseCommand):
         # Revoke all tokens for a user
         if wallet_hash:
             try:
-                user = BitcoinCashUser.objects.get(user_id=wallet_hash)
-            except BitcoinCashUser.DoesNotExist:
+                user = _get_user_model().objects.get(user_id=wallet_hash)
+            except _get_user_model().DoesNotExist:
                 raise CommandError(f"User not found: {wallet_hash}")
 
-            count = OAuthToken.revoke_all_user_tokens(user)
+            count = _get_token_model().revoke_all_user_tokens(user)
             self.stdout.write(
                 self.style.SUCCESS(
                     f"Successfully revoked {count} tokens for user: {wallet_hash}"
@@ -79,7 +89,7 @@ class Command(BaseCommand):
         if all_expired:
             from django.utils import timezone
 
-            expired_tokens = OAuthToken.objects.filter(
+            expired_tokens = _get_token_model().objects.filter(
                 expires_at__lt=timezone.now(), is_revoked=False
             )
 

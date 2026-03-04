@@ -6,8 +6,13 @@ Usage:
 """
 
 from django.core.management.base import BaseCommand, CommandError
-from bitcoincash_oauth_django.models import BitcoinCashUser
 from bitcoincash_oauth_django.validator import BitcoinCashValidator
+from bitcoincash_oauth_django.settings import get_settings
+
+
+def _get_user_model():
+    """Get the user model class"""
+    return get_settings().get_user_model()
 
 
 class Command(BaseCommand):
@@ -53,15 +58,15 @@ class Command(BaseCommand):
             raise CommandError(f"Invalid Bitcoin Cash address: {address}")
 
         # Check if user already exists
-        if BitcoinCashUser.objects.filter(user_id=wallet_hash).exists():
+        if _get_user_model().objects.filter(user_id=wallet_hash).exists():
             raise CommandError(f'User with wallet hash "{wallet_hash}" already exists')
 
-        if BitcoinCashUser.objects.filter(bitcoin_address=address).exists():
+        if _get_user_model().objects.filter(bitcoin_address=address).exists():
             raise CommandError(f'User with address "{address}" already exists')
 
         # Create user
         try:
-            user = BitcoinCashUser.objects.create_user(
+            user = _get_user_model().objects.create_user(
                 user_id=wallet_hash,
                 bitcoin_address=address,
                 public_key=public_key or "",

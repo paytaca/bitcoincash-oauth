@@ -4,8 +4,17 @@ Helper functions for common operations
 """
 
 from django.http import HttpRequest
-from .models import OAuthToken, BitcoinCashUser
 from .settings import get_settings
+
+
+def _get_user_model():
+    """Lazy import of user model to avoid AppRegistryNotReady"""
+    return get_settings().get_user_model()
+
+
+def _get_token_model():
+    """Lazy import of token model to avoid AppRegistryNotReady"""
+    return get_settings().get_token_model()
 
 
 def get_wallet_hash(request):
@@ -27,8 +36,10 @@ def get_wallet_hash(request):
     if not hasattr(request, "user") or not request.user.is_authenticated:
         return None
 
-    # Check if it's a BitcoinCashUser
-    if isinstance(request.user, BitcoinCashUser):
+    UserModel = _get_user_model()
+
+    # Check if it's the configured user model
+    if isinstance(request.user, UserModel):
         return request.user.user_id
 
     # Check for oauth_scopes attribute (set by our auth backend)
@@ -51,7 +62,9 @@ def get_bitcoin_address(request):
     if not hasattr(request, "user") or not request.user.is_authenticated:
         return None
 
-    if isinstance(request.user, BitcoinCashUser):
+    UserModel = _get_user_model()
+
+    if isinstance(request.user, UserModel):
         return request.user.bitcoin_address
 
     # Try to get from user model
@@ -120,10 +133,12 @@ def get_current_token(request):
     if not hasattr(request, "user") or not request.user.is_authenticated:
         return None
 
+    TokenModel = _get_token_model()
+
     if hasattr(request.user, "oauth_token"):
         return request.user.oauth_token
 
-    if hasattr(request, "token_data") and isinstance(request.token_data, OAuthToken):
+    if hasattr(request, "token_data") and isinstance(request.token_data, TokenModel):
         return request.token_data
 
     return None

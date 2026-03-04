@@ -48,11 +48,8 @@ from .validator import (
     public_key_to_cash_address,
 )
 
-# Models
-from .models import (
-    BitcoinCashUser,
-    OAuthToken,
-)
+# Note: Models are NOT imported at module level to avoid AppRegistryNotReady.
+# Use django.apps.apps.get_model() or import from .models directly when needed.
 
 # Settings
 from .settings import (
@@ -174,9 +171,8 @@ __all__ = [
     "BitcoinCashValidator",
     "verify_bitcoin_cash_auth",
     "public_key_to_cash_address",
-    # Models
-    "BitcoinCashUser",
-    "OAuthToken",
+    # Note: Models are not exported at module level.
+    # Import from .models directly or use django.apps.apps.get_model()
     # Settings
     "get_settings",
     "check_settings",

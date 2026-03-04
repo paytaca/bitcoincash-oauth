@@ -28,8 +28,12 @@ DEFAULTS = {
         "refresh_endpoint": "10/m",
         "register_endpoint": "3/m",
     },
-    # User model
-    "USER_MODEL": None,  # Set to use a custom user model, e.g., 'myapp.MyUser'
+    # User model - set to use a custom model to avoid conflicts
+    # Format: 'app_label.ModelName' e.g., 'myapp.MyBitcoinCashUser'
+    "USER_MODEL": None,
+    # Token model - set to use a custom model to avoid conflicts
+    # Format: 'app_label.ModelName' e.g., 'myapp.MyOAuthToken'
+    "TOKEN_MODEL": None,
 }
 
 
@@ -79,6 +83,19 @@ class OAuthSettings:
         from django.apps import apps
 
         model_string = self.get_user_model_string()
+        return apps.get_model(model_string)
+
+    def get_token_model_string(self):
+        """Get the token model string from settings or use default"""
+        if self.TOKEN_MODEL:
+            return self.TOKEN_MODEL
+        return "bitcoincash_oauth_django.OAuthToken"
+
+    def get_token_model(self):
+        """Get the token model class"""
+        from django.apps import apps
+
+        model_string = self.get_token_model_string()
         return apps.get_model(model_string)
 
 

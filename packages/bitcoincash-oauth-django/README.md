@@ -302,6 +302,49 @@ BITCOINCASH_OAUTH = {
 | `MAX_TIMESTAMP_DIFF` | `300` | Max timestamp age for replay protection (seconds) |
 | `REQUIRE_SIGNATURE_FOR_REGISTRATION` | `False` | Require signature verification for registration |
 
+### Custom Models (Avoiding Conflicts)
+
+If your project already has models named `BitcoinCashUser` or `OAuthToken`, you can use custom models:
+
+```python
+# settings.py
+
+BITCOINCASH_OAUTH = {
+    'USER_MODEL': 'myapp.MyBitcoinCashUser',  # Your custom user model
+    'TOKEN_MODEL': 'myapp.MyOAuthToken',      # Your custom token model
+}
+```
+
+Your custom models should inherit from the base models:
+
+```python
+# myapp/models.py
+from bitcoincash_oauth_django.models import BitcoinCashUser, OAuthToken
+
+class MyBitcoinCashUser(BitcoinCashUser):
+    # Add your custom fields
+    custom_field = models.CharField(max_length=100)
+
+class MyOAuthToken(OAuthToken):
+    # Add your custom fields
+    custom_data = models.JSONField(default=dict)
+```
+
+**Note:** When using custom models, do NOT add `bitcoincash_oauth_django` to `INSTALLED_APPS`. Instead:
+
+```python
+# settings.py
+INSTALLED_APPS = [
+    # 'bitcoincash_oauth_django',  # Don't add this
+    'myapp',  # Add your app with the custom models
+]
+
+# Keep the URLs
+urlpatterns = [
+    path('auth/', include('bitcoincash_oauth_django.urls')),
+]
+```
+
 ## Dependencies
 
 - `django>=4.0`

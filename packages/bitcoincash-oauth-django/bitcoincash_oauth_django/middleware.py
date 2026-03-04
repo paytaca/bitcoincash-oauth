@@ -7,8 +7,12 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.core.cache import cache
 
-from .models import OAuthToken
 from .settings import get_settings
+
+
+def _get_token_model():
+    """Get the token model class lazily"""
+    return get_settings().get_token_model()
 
 
 class TokenValidationMiddleware:
@@ -82,7 +86,7 @@ class TokenValidationMiddleware:
                 return cached_token
 
         # Validate from database
-        token = OAuthToken.validate_access_token(token_str)
+        token = _get_token_model().validate_access_token(token_str)
 
         if token:
             # Cache valid token for 5 minutes
@@ -106,7 +110,7 @@ class TokenValidationMiddleware:
         if last_cleanup is None:
             # Run cleanup
             try:
-                deleted = OAuthToken.cleanup_expired_tokens()
+                deleted = _get_token_model().cleanup_expired_tokens()
                 if deleted > 0:
                     print(f"[BitcoinCashOAuth] Cleaned up {deleted} expired tokens")
             except Exception as e:

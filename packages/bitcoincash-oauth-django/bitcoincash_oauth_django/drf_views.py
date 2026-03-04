@@ -14,9 +14,7 @@ from rest_framework.exceptions import (
     PermissionDenied,
 )
 
-from .models import BitcoinCashUser, OAuthToken
 from .validator import BitcoinCashValidator, verify_bitcoin_cash_auth
-from .settings import get_settings
 from .signals import (
     token_created,
     token_refreshed,
@@ -35,6 +33,18 @@ from .exceptions import (
     RegistrationError,
 )
 from .utils import create_registration_message
+from .settings import get_settings
+
+
+# Lazy model loading helpers to avoid AppRegistryNotReady
+def _get_user_model():
+    """Get the user model class lazily"""
+    return get_settings().get_user_model()
+
+
+def _get_token_model():
+    """Get the token model class lazily"""
+    return get_settings().get_token_model()
 
 
 # Serializers
@@ -135,7 +145,7 @@ class IsBitcoinCashAuthenticated(permissions.BasePermission):
             return False
 
         token = auth_header[7:]  # Remove "Bearer "
-        oauth_token = OAuthToken.validate_access_token(token)
+        oauth_token = _get_token_model().validate_access_token(token)
 
         if not oauth_token:
             return False
@@ -298,7 +308,7 @@ class RegisterView(APIView):
                 raise AuthenticationFailed(f"Signature verification failed: {reason}")
 
         # Check if user already exists
-        if user_id and BitcoinCashUser.objects.filter(user_id=user_id).exists():
+        if user_id and _get_user_model().objects.filter(user_id=user_id).exists():
             registration_failed.send(
                 sender=self.__class__,
                 address=address,
@@ -307,8 +317,8 @@ class RegisterView(APIView):
             )
             raise ValidationError({"user_id": "User ID already exists"})
 
-        if BitcoinCashUser.objects.filter(bitcoin_address=address).exists():
-            existing = BitcoinCashUser.objects.get(bitcoin_address=address)
+        if _get_user_model().objects.filter(bitcoin_address=address).exists():
+            existing = _get_user_model().objects.get(bitcoin_address=address)
             return Response(
                 {
                     "user_id": existing.user_id,
@@ -319,7 +329,7 @@ class RegisterView(APIView):
 
         try:
             # Create user
-            user = BitcoinCashUser.objects.create_user(
+            user = _get_user_model().objects.create_user(
                 user_id=user_id,
                 bitcoin_address=address,
                 public_key=serializer.validated_data.get("public_key", ""),
@@ -387,8 +397,8 @@ class TokenView(APIView):
 
         # Check if user exists
         try:
-            user = BitcoinCashUser.objects.get(user_id=user_id)
-        except BitcoinCashUser.DoesNotExist:
+            user = _get_user_model().objects.get(user_id=user_id)
+        except _get_user_model().DoesNotExist:
             authentication_failed.send(
                 sender=self.__class__,
                 user_id=user_id,
@@ -431,7 +441,7 @@ class TokenView(APIView):
         ip_address = self._get_client_ip(request)
         user_agent = request.headers.get("User-Agent", "")[:255]
 
-        token = OAuthToken.create_token_pair(
+        token = _get_token_model().create_token_pair(
             user=user, scopes=scopes, ip_address=ip_address, user_agent=user_agent
         )
 
@@ -488,7 +498,7 @@ class RefreshView(APIView):
         refresh_token = serializer.validated_data["refresh_token"]
 
         # Validate refresh token
-        old_token = OAuthToken.validate_refresh_token(refresh_token)
+        old_token = _get_token_model().validate_refresh_token(refresh_token)
 
         if not old_token:
             raise AuthenticationFailed("Invalid or expired refresh token")
@@ -503,7 +513,7 @@ class RefreshView(APIView):
         ip_address = self._get_client_ip(request)
         user_agent = request.headers.get("User-Agent", "")[:255]
 
-        new_token = OAuthToken.create_token_pair(
+        new_token = _get_token_model().create_token_pair(
             user=user, scopes=scopes, ip_address=ip_address, user_agent=user_agent
         )
 
@@ -566,13 +576,13 @@ class RevokeView(APIView):
         token = serializer.validated_data["token"]
 
         # Find and revoke token
-        oauth_token = OAuthToken.validate_access_token(token)
+        oauth_token = _get_token_model().validate_access_token(token)
 
         if not oauth_token:
             # Try to find it anyway (might be expired)
             try:
-                oauth_token = OAuthToken.objects.get(access_token=token)
-            except OAuthToken.DoesNotExist:
+                oauth_token = _get_token_model().objects.get(access_token=token)
+            except _get_token_model().DoesNotExist:
                 raise NotFound("Token not found")
 
         user = oauth_token.user

@@ -6,7 +6,12 @@ Usage:
 """
 
 from django.core.management.base import BaseCommand
-from bitcoincash_oauth_django.models import OAuthToken
+from bitcoincash_oauth_django.settings import get_settings
+
+
+def _get_token_model():
+    """Get the token model class"""
+    return get_settings().get_token_model()
 
 
 class Command(BaseCommand):
@@ -26,12 +31,12 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("DRY RUN - No deletions will be made"))
 
         # Get count before cleanup
-        total_tokens = OAuthToken.objects.count()
+        total_tokens = _get_token_model().objects.count()
 
         # Cleanup expired tokens
-        deleted = OAuthToken.cleanup_expired_tokens()
+        deleted = _get_token_model().cleanup_expired_tokens()
 
-        remaining = OAuthToken.objects.count()
+        remaining = _get_token_model().objects.count()
 
         self.stdout.write(
             self.style.SUCCESS(

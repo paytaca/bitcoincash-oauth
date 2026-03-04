@@ -7,8 +7,13 @@ from django.contrib.auth.backends import BaseBackend
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 
-from .models import OAuthToken
 from .exceptions import InvalidTokenError, TokenExpiredError, RevokedTokenError
+from .settings import get_settings
+
+
+def _get_token_model():
+    """Get the token model class lazily"""
+    return get_settings().get_token_model()
 
 
 class BitcoinCashOAuthBackend(BaseBackend):
@@ -38,7 +43,7 @@ class BitcoinCashOAuthBackend(BaseBackend):
 
         try:
             # Validate the token
-            oauth_token = OAuthToken.validate_access_token(token)
+            oauth_token = _get_token_model().validate_access_token(token)
 
             if oauth_token is None:
                 return None
@@ -92,7 +97,7 @@ class BitcoinCashModelBackend(BaseBackend):
             return None
 
         try:
-            oauth_token = OAuthToken.validate_access_token(token)
+            oauth_token = _get_token_model().validate_access_token(token)
 
             if oauth_token is None:
                 return None

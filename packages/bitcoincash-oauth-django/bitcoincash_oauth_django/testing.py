@@ -24,8 +24,18 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import OAuthToken, BitcoinCashUser
 from .validator import BitcoinCashValidator
+from .settings import get_settings
+
+
+def _get_user_model():
+    """Get the user model class lazily"""
+    return get_settings().get_user_model()
+
+
+def _get_token_model():
+    """Get the token model class lazily"""
+    return get_settings().get_token_model()
 
 
 class OAuthTestCase(TestCase):
@@ -86,10 +96,10 @@ class OAuthTestCase(TestCase):
         else:
             expires_at = now + timedelta(seconds=settings.access_token_lifetime)
 
-        token = OAuthToken.objects.create(
+        token = _get_token_model().objects.create(
             user=user,
-            access_token=OAuthToken.generate_token(),
-            refresh_token=OAuthToken.generate_token(),
+            access_token=_get_token_model().generate_token(),
+            refresh_token=_get_token_model().generate_token(),
             scopes=scopes or ["read"],
             expires_at=expires_at,
             refresh_expires_at=now + timedelta(seconds=settings.refresh_token_lifetime),
