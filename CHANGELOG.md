@@ -14,6 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `groups` → `related_name="bitcoincashuser_groups"`
   - `user_permissions` → `related_name="bitcoincashuser_user_permissions"`
 
+### FastAPI Package (bitcoincash-oauth-fastapi)
+
+#### Fixed
+- **Model import conflicts**: Resolved import order issues by removing model imports from `__init__.py`
+- **Swappable models**: Added support for custom models via `USER_MODEL` and `TOKEN_MODEL` settings with `register_model()` function
+- **Lazy model loading**: Updated all modules to use lazy loading via `get_user_model()` and `get_token_model()`
+
+#### Changed
+- **Documentation**: Updated registration endpoint documentation with signature-based verification examples
+
 ### Package Versions
 - **Django**: `0.2.0` → `0.2.1`
 - **FastAPI**: `0.2.0` → `0.2.1`
