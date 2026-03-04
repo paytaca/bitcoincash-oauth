@@ -162,15 +162,44 @@ All server packages provide these endpoints:
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/auth/register` | POST | Register new user with Bitcoin Cash address |
+| `/auth/register` | POST | Register new user (signature verification optional/configurable) |
 | `/auth/token` | POST | Obtain OAuth token via signature |
 | `/auth/refresh` | POST | Refresh access token |
 | `/auth/revoke` | POST | Revoke access token |
 | `/auth/me` | GET | Get current user info |
 
+### Registration
+
+Registration supports optional signature-based verification to prevent wallet address squatting:
+
+**Basic Registration:**
+```json
+POST /auth/register
+{
+  "address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
+  "user_id": "optional_custom_id"
+}
+```
+
+**Signature-Based Registration (when enabled):**
+```json
+POST /auth/register
+{
+  "address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
+  "user_id": "optional_custom_id",
+  "timestamp": 1234567890,
+  "domain": "app.example.com",
+  "public_key": "0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",
+  "signature": "3045022100..."
+}
+```
+
+**Signature Message Format:** `bitcoincash-oauth|domain|userId|timestamp|register`
+
 ## Security Features
 
 - **Signature-Based Authentication**: ECDSA signatures using secp256k1
+- **Signature-Based Registration**: Optional proof-of-ownership to prevent address squatting
 - **Domain Binding**: Prevents phishing across different domains
 - **Replay Protection**: Timestamp validation (5-minute window)
 - **Token Rotation**: Refresh tokens rotate for enhanced security

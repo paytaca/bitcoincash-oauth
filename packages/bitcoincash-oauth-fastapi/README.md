@@ -43,9 +43,9 @@ The following endpoints are automatically added:
 
 ### POST `/auth/register`
 
-Register a new user with a Bitcoin Cash address.
+Register a new user with a Bitcoin Cash address. When `REQUIRE_SIGNATURE_FOR_REGISTRATION` is enabled, proof of wallet ownership is required.
 
-**Request:**
+**Request (without signature verification):**
 ```json
 {
   "address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
@@ -53,12 +53,32 @@ Register a new user with a Bitcoin Cash address.
 }
 ```
 
+**Request (with signature verification):**
+```json
+{
+  "address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
+  "user_id": "optional_custom_id",
+  "timestamp": 1234567890,
+  "domain": "app.example.com",
+  "public_key": "0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",
+  "signature": "3045022100..."
+}
+```
+
+**Message Format:** `bitcoincash-oauth|domain|userId|timestamp|register`
+- `bitcoincash-oauth`: Protocol identifier (prevents cross-protocol replay)
+- `domain`: Domain/host of the application (prevents phishing)
+- `userId`: User's unique identifier
+- `timestamp`: Unix timestamp for replay protection
+- `register`: Action identifier
+
 **Response:**
 ```json
 {
   "user_id": "user_abc123",
   "address": "bitcoincash:qqrxvhnn88gmpczyxry254vcsnl6canmkqgt98lpn5",
-  "message": "User registered successfully"
+  "message": "User registered successfully",
+  "signature_required": false
 }
 ```
 
@@ -187,6 +207,24 @@ app.include_router(create_oauth_router(), prefix="/auth")
 | `refresh_token_ttl` | `2592000` | Refresh token lifetime (seconds) |
 | `max_tokens_per_user` | `5` | Maximum active tokens per user |
 | `max_timestamp_diff` | `300` | Max timestamp age for replay protection |
+| `require_signature_for_registration` | `false` | Require signature verification for registration |
+
+### Environment Variables
+
+```bash
+# Database
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost/db
+
+# Security
+SECRET_KEY=your-secret-key-here
+REQUIRE_SIGNATURE_FOR_REGISTRATION=true
+
+# Token settings
+ACCESS_TOKEN_LIFETIME=3600
+REFRESH_TOKEN_LIFETIME=2592000
+MAX_TOKENS_PER_USER=5
+MAX_TIMESTAMP_DIFF=300
+```
 
 ## Dependencies
 
