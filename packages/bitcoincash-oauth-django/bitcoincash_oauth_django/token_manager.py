@@ -1,15 +1,15 @@
 """
 Bitcoin Cash OAuth Django - Token management module
-OAuth token management for Bitcoin Cash authentication
+OAuth token management for Bitcoin Cash authentication using Django ORM
 """
 
 import time
 import uuid
 import secrets
-import jwt
 from datetime import datetime, timedelta
-from typing import Dict, Optional, Set
+from typing import Dict, Optional, Set, List
 from dataclasses import dataclass, field
+from django.db import models
 
 
 @dataclass
@@ -27,7 +27,7 @@ class TokenData:
 
 
 class TokenManager:
-    """Manages OAuth tokens for authenticated users"""
+    """Manages OAuth tokens using Django ORM models"""
 
     def __init__(
         self,
@@ -39,249 +39,181 @@ class TokenManager:
         self.refresh_token_ttl = refresh_token_ttl
         self.max_tokens_per_user = max_tokens_per_user
 
-        # Storage (in production, use Redis or database)
-        self._tokens: Dict[str, TokenData] = {}  # access_token -> TokenData
-        self._refresh_tokens: Dict[str, str] = {}  # refresh_token -> access_token
-        self._user_tokens: Dict[str, Set[str]] = {}  # user_id -> set of access_tokens
-        self._revoked_tokens: Set[str] = set()
-        self._address_to_user: Dict[str, str] = {}  # bitcoincash_address -> user_id
-        self._user_to_address: Dict[str, str] = {}  # user_id -> bitcoincash_address
-
-    def _generate_token(self) -> str:
-        """Generate a cryptographically secure random token"""
-        return secrets.token_urlsafe(32)
-
-    def _generate_user_id(self) -> str:
-        """Generate a unique user ID"""
-        return f"user_{uuid.uuid4().hex[:16]}"
+    def _get_models(self):
+        """Lazy import Django models to avoid AppRegistryNotReady"""
+        from .models import BitcoinCashUser, OAuthToken
+        return BitcoinCashUser, OAuthToken
 
     def register_user(
         self, bitcoincash_address: str, user_id: Optional[str] = None
     ) -> str:
-        """
-        Register a new user with a Bitcoin Cash address
+        """Register a new user with a Bitcoin Cash address"""
+        BitcoinCashUser, OAuthToken = self._get_models()
 
-        Args:
-            bitcoincash_address: The Bitcoin Cash address
-            user_id: Optional user-provided ID (if None, generates one)
-
-        Returns:
-            The user_id
-        """
-        # Check if address already registered
-        if bitcoincash_address in self._address_to_user:
-            return self._address_to_user[bitcoincash_address]
+        # Check if user already exists
+        existing_user = BitcoinCashUser.objects.filter(
+            models.Q(bitcoincash_address=bitcoincash_address) | models.Q(user_id=user_id)
+        ).first()
+        
+        if existing_user:
+            return existing_user.user_id
 
         # Use provided ID or generate one
         if user_id is None:
-            user_id = self._generate_user_id()
-        elif user_id in self._user_to_address:
-            raise ValueError(f"User ID '{user_id}' already exists")
+            user_id = f"user_{uuid.uuid4().hex[:16]}"
 
-        # Store mappings
-        self._address_to_user[bitcoincash_address] = user_id
-        self._user_to_address[user_id] = bitcoincash_address
-        self._user_tokens[user_id] = set()
+        user = BitcoinCashUser.objects.create(
+            user_id=user_id,
+            bitcoincash_address=bitcoincash_address,
+        )
 
-        return user_id
+        return user.user_id
 
     def get_user_address(self, user_id: str) -> Optional[str]:
         """Get the Bitcoin Cash address for a user"""
-        return self._user_to_address.get(user_id)
+        BitcoinCashUser, OAuthToken = self._get_models()
+        try:
+            user = BitcoinCashUser.objects.get(user_id=user_id)
+            return user.bitcoincash_address
+        except BitcoinCashUser.DoesNotExist:
+            return None
 
     def user_exists(self, user_id: str) -> bool:
         """Check if a user exists"""
-        return user_id in self._user_to_address
+        BitcoinCashUser, OAuthToken = self._get_models()
+        return BitcoinCashUser.objects.filter(user_id=user_id).exists()
 
     def create_token_pair(
         self, user_id: str, scopes: Optional[list] = None
     ) -> TokenData:
-        """
-        Create a new access token and refresh token pair
+        """Create a new access token and refresh token pair"""
+        BitcoinCashUser, OAuthToken = self._get_models()
+        from django.utils import timezone
 
-        Args:
-            user_id: The user identifier
-            scopes: Optional list of OAuth scopes
+        # Get user
+        try:
+            user = BitcoinCashUser.objects.get(user_id=user_id)
+        except BitcoinCashUser.DoesNotExist:
+            raise ValueError(f"User '{user_id}' not found")
 
-        Returns:
-            TokenData containing both tokens
-        """
-        # Clean up old tokens for this user if exceeding max
-        if user_id in self._user_tokens:
-            user_token_set = self._user_tokens[user_id]
-            if len(user_token_set) >= self.max_tokens_per_user:
-                # Remove oldest token
-                oldest_token = min(
-                    user_token_set, key=lambda t: self._tokens[t].created_at
-                )
-                self.revoke_token(oldest_token)
+        # Clean up old tokens if exceeding max
+        active_tokens = OAuthToken.objects.filter(
+            user=user,
+            is_revoked=False,
+            expires_at__gt=timezone.now()
+        ).count()
+
+        if active_tokens >= self.max_tokens_per_user:
+            # Revoke oldest token
+            oldest = OAuthToken.objects.filter(
+                user=user,
+                is_revoked=False
+            ).order_by('created_at').first()
+            if oldest:
+                oldest.revoke()
 
         # Generate tokens
-        access_token = self._generate_token()
-        refresh_token = self._generate_token()
+        access_token = secrets.token_urlsafe(32)
+        refresh_token = secrets.token_urlsafe(32)
+        now = timezone.now()
 
-        now = time.time()
-
-        token_data = TokenData(
+        # Create token in database
+        token = OAuthToken.objects.create(
+            user=user,
             access_token=access_token,
             refresh_token=refresh_token,
-            user_id=user_id,
-            created_at=now,
-            expires_at=now + self.access_token_ttl,
             scopes=scopes or ["read"],
+            expires_at=now + timedelta(seconds=self.access_token_ttl),
+            refresh_expires_at=now + timedelta(seconds=self.refresh_token_ttl),
         )
 
-        # Store tokens
-        self._tokens[access_token] = token_data
-        self._refresh_tokens[refresh_token] = access_token
-
-        # Track user's tokens
-        if user_id not in self._user_tokens:
-            self._user_tokens[user_id] = set()
-        self._user_tokens[user_id].add(access_token)
-
-        return token_data
+        return TokenData(
+            access_token=token.access_token,
+            refresh_token=token.refresh_token,
+            token_type=token.token_type,
+            expires_in=int((token.expires_at - now).total_seconds()),
+            user_id=user_id,
+            created_at=now.timestamp(),
+            expires_at=token.expires_at.timestamp(),
+            scopes=token.scopes,
+        )
 
     def validate_access_token(self, access_token: str) -> Optional[TokenData]:
-        """
-        Validate an access token
+        """Validate an access token"""
+        BitcoinCashUser, OAuthToken = self._get_models()
 
-        Returns:
-            TokenData if valid, None otherwise
-        """
-        # Check if revoked
-        if access_token in self._revoked_tokens:
+        token = OAuthToken.validate_access_token(access_token)
+        if not token:
             return None
 
-        # Check if exists
-        if access_token not in self._tokens:
-            return None
-
-        token_data = self._tokens[access_token]
-
-        # Check expiration
-        if time.time() > token_data.expires_at:
-            # Clean up expired token
-            self.revoke_token(access_token)
-            return None
-
-        return token_data
+        return TokenData(
+            access_token=token.access_token,
+            refresh_token=token.refresh_token,
+            token_type=token.token_type,
+            expires_in=token.expires_in,
+            user_id=token.user.user_id,
+            created_at=token.created_at.timestamp(),
+            expires_at=token.expires_at.timestamp(),
+            scopes=token.scopes,
+        )
 
     def refresh_access_token(self, refresh_token: str) -> Optional[TokenData]:
-        """
-        Refresh an access token using a refresh token
+        """Refresh an access token using a refresh token"""
+        BitcoinCashUser, OAuthToken = self._get_models()
+        from django.utils import timezone
 
-        Args:
-            refresh_token: The refresh token
-
-        Returns:
-            New TokenData if successful, None otherwise
-        """
-        # Check if refresh token exists
-        if refresh_token not in self._refresh_tokens:
+        token = OAuthToken.validate_refresh_token(refresh_token)
+        if not token:
             return None
 
-        # Get the old access token
-        old_access_token = self._refresh_tokens[refresh_token]
-
-        # Check if it was revoked
-        if old_access_token in self._revoked_tokens:
-            return None
-
-        # Get old token data
-        old_token_data = self._tokens.get(old_access_token)
-        if not old_token_data:
-            return None
-
-        user_id = old_token_data.user_id
-        scopes = old_token_data.scopes
-
-        # Revoke old tokens
-        self.revoke_token(old_access_token)
-        del self._refresh_tokens[refresh_token]
+        # Revoke old token
+        token.revoke()
 
         # Create new token pair
-        return self.create_token_pair(user_id, scopes)
+        return self.create_token_pair(token.user.user_id, token.scopes)
 
     def revoke_token(self, access_token: str) -> bool:
-        """
-        Revoke an access token
+        """Revoke an access token"""
+        BitcoinCashUser, OAuthToken = self._get_models()
 
-        Returns:
-            True if token was revoked, False if not found
-        """
-        if access_token not in self._tokens:
+        try:
+            token = OAuthToken.objects.get(access_token=access_token)
+            token.revoke()
+            return True
+        except OAuthToken.DoesNotExist:
             return False
 
-        token_data = self._tokens[access_token]
-        user_id = token_data.user_id
-
-        # Remove from user's token set
-        if user_id in self._user_tokens:
-            self._user_tokens[user_id].discard(access_token)
-
-        # Mark as revoked
-        self._revoked_tokens.add(access_token)
-
-        # Clean up from active tokens
-        del self._tokens[access_token]
-
-        # Clean up associated refresh token
-        for rt, at in list(self._refresh_tokens.items()):
-            if at == access_token:
-                del self._refresh_tokens[rt]
-                break
-
-        return True
-
     def revoke_all_user_tokens(self, user_id: str) -> int:
-        """
-        Revoke all tokens for a user
+        """Revoke all tokens for a user"""
+        BitcoinCashUser, OAuthToken = self._get_models()
+        from django.utils import timezone
 
-        Returns:
-            Number of tokens revoked
-        """
-        if user_id not in self._user_tokens:
-            return 0
-
-        tokens_to_revoke = list(self._user_tokens[user_id])
-        count = 0
-
-        for token in tokens_to_revoke:
-            if self.revoke_token(token):
-                count += 1
-
-        return count
+        return OAuthToken.objects.filter(
+            user__user_id=user_id,
+            is_revoked=False
+        ).update(
+            is_revoked=True,
+            revoked_at=timezone.now()
+        )
 
     def cleanup_expired_tokens(self) -> int:
-        """
-        Remove all expired tokens from storage
+        """Remove all expired tokens"""
+        BitcoinCashUser, OAuthToken = self._get_models()
 
-        Returns:
-            Number of tokens cleaned up
-        """
-        now = time.time()
-        expired_tokens = [
-            token for token, data in self._tokens.items() if now > data.expires_at
-        ]
-
-        for token in expired_tokens:
-            self.revoke_token(token)
-
-        return len(expired_tokens)
+        return OAuthToken.cleanup_expired_tokens()
 
     def get_token_info(self, access_token: str) -> Optional[Dict]:
         """Get information about a token"""
-        token_data = self.validate_access_token(access_token)
-        if not token_data:
+        token = self.validate_access_token(access_token)
+        if not token:
             return None
 
         return {
-            "user_id": token_data.user_id,
-            "created_at": datetime.fromtimestamp(token_data.created_at).isoformat(),
-            "expires_at": datetime.fromtimestamp(token_data.expires_at).isoformat(),
-            "scopes": token_data.scopes,
-            "token_type": token_data.token_type,
+            "user_id": token.user_id,
+            "created_at": datetime.fromtimestamp(token.created_at).isoformat(),
+            "expires_at": datetime.fromtimestamp(token.expires_at).isoformat(),
+            "scopes": token.scopes,
+            "token_type": token.token_type,
         }
 
 
