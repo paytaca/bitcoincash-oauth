@@ -1,9 +1,16 @@
 # Generated manually for Bitcoin Cash OAuth Django v2.0.0
 
+import django
 from django.db import migrations, models
 import django.db.models.deletion
 import django.utils.timezone
 import uuid
+
+# JSONField compatibility: django.db.models.JSONField only available in Django 3.1+
+if django.VERSION >= (3, 1):
+    JSONField = models.JSONField
+else:
+    from django.contrib.postgres.fields import JSONField
 
 
 class Migration(migrations.Migration):
@@ -115,7 +122,7 @@ class Migration(migrations.Migration):
                 ("token_type", models.CharField(default="bearer", max_length=20)),
                 (
                     "scopes",
-                    models.JSONField(
+                    JSONField(
                         default=list,
                         help_text="List of OAuth scopes",
                     ),
