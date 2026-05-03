@@ -1,6 +1,6 @@
 {
   "name": "bitcoincash-oauth-client",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "repository": {
     "type": "git",
     "url": "https://github.com/paytaca/bitcoincash-oauth.git"
@@ -42,7 +42,7 @@
     "nodejs",
     "universal"
   ],
-  "author": "",
+  "author": "Joemar Taganna <joemar.ct@gmail.com>",
   "license": "MIT",
   "dependencies": {
     "@bitauth/libauth": "^1.19.1"

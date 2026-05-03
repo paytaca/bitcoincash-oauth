@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.11] - 2026-05-04
+
+### All Packages
+
+#### Changed
+- **Author metadata**: Updated package author information to Joemar Taganna (`joemar.ct@gmail.com`)
+
+### JavaScript Client (bitcoincash-oauth-client)
+
+#### Added
+- **Configurable auth base path**: New `authBasePath` option in `OAuthClientOptions` (default: `/auth`)
+  - Allows customization of auth endpoint base path (e.g., `/bch-auth` for Watchtower API compatibility)
+  - All auth endpoints now use the configurable base path dynamically
+
+#### Changed
+- **Version bump**: `0.2.10` → `0.2.11`
+
+### Django Package (bitcoincash-oauth-django)
+
+#### Changed
+- **Token manager refactor**: Migrated `TokenManager` from in-memory storage to Django ORM models
+  - All token operations now persist via `OAuthToken` and `BitcoinCashUser` models
+  - Lazy model imports to avoid `AppRegistryNotReady` errors
+  - Proper token lifecycle management through ORM queries
+- **Django 3.0+ compatibility**: Multiple fixes for broader Django version support
+  - Lowered migration dependency from `0012` to `0008` for Django 3.0 compatibility
+  - Use `django.contrib.postgres.fields.JSONField` in initial migration for Django < 3.1
+  - Replaced `RenameIndex` with `RemoveIndex` + `AddIndex` for Django 3.0 compatibility
+  - Expanded classifier support for Django 3.0 through 5.0
+  - Expanded DRF support to 3.11+
+- **Version bump**: `0.2.10` → `0.2.11`
+
+### FastAPI Package (bitcoincash-oauth-fastapi)
+
+#### Changed
+- **Author metadata**: Updated package author to Joemar Taganna
+
+### Package Versions
+- **Django**: `0.2.10` → `0.2.11`
+- **FastAPI**: `0.2.3` (unchanged)
+- **JavaScript Client**: `0.2.10` → `0.2.11`
+
 ## [0.2.2] - 2026-03-04
 
 ### All Packages
@@ -271,6 +313,7 @@ If you previously installed version 1.0.0:
 - `bitcoincash-oauth-fastapi` - https://pypi.org/project/bitcoincash-oauth-fastapi/
 - `bitcoincash-oauth-client` - https://www.npmjs.com/package/bitcoincash-oauth-client
 
+[0.2.11]: https://github.com/paytaca/bitcoincash-oauth/releases/tag/v0.2.11
 [0.2.2]: https://github.com/paytaca/bitcoincash-oauth/releases/tag/v0.2.2
 [0.2.1]: https://github.com/paytaca/bitcoincash-oauth/releases/tag/v0.2.1
 [0.2.0]: https://github.com/paytaca/bitcoincash-oauth/releases/tag/v0.2.0
