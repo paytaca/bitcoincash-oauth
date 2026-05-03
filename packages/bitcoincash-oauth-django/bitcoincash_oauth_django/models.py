@@ -6,8 +6,15 @@ Django ORM models for database persistence
 import uuid
 import secrets
 from datetime import datetime, timedelta
+import django
 from django.db import models
 from django.utils import timezone
+
+# JSONField compatibility: django.db.models.JSONField only available in Django 3.1+
+if django.VERSION >= (3, 1):
+    JSONField = models.JSONField
+else:
+    from django.contrib.postgres.fields import JSONField
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
@@ -153,7 +160,7 @@ class OAuthToken(models.Model):
 
     # Token metadata
     token_type = models.CharField(max_length=20, default="bearer")
-    scopes = models.JSONField(default=list, help_text="List of OAuth scopes")
+    scopes = JSONField(default=list, help_text="List of OAuth scopes")
 
     # User relationship
     user = models.ForeignKey(
