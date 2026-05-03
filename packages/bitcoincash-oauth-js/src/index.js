@@ -49,6 +49,7 @@ export {
  * @typedef {Object} OAuthClientOptions
  * @property {string} [serverUrl="http://localhost:8000"] - OAuth server URL
  * @property {string} [network="mainnet"] - Network type ("mainnet" or "testnet")
+ * @property {string} [authBasePath="/auth"] - Base path for auth endpoints (e.g., "/auth" or "/bch-auth")
  * @property {SecureStorage} [secureStorage] - Storage interface for tokens
  * @property {Function} [fetch] - Custom fetch implementation (optional)
  * @property {string} [tokenKey="oauth_token"] - Key for storing access token
@@ -86,6 +87,7 @@ export class BitcoinCashOAuthClient {
   constructor(options = {}) {
     this.serverUrl = options.serverUrl || "http://localhost:8000";
     this.network = options.network || "mainnet";
+    this.authBasePath = options.authBasePath || "/auth";
     this.secureStorage = options.secureStorage || null;
     this.fetchImpl = options.fetch || getFetch(options.fetch);
     this.secp256k1 = null;
@@ -237,7 +239,7 @@ export class BitcoinCashOAuthClient {
 
       this._log('Registering user', { bitcoincash_address, userId, domain: host });
 
-      const response = await this.fetchImpl(`${this.serverUrl}/auth/register`, {
+      const response = await this.fetchImpl(`${this.serverUrl}${this.authBasePath}/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -333,7 +335,7 @@ export class BitcoinCashOAuthClient {
     this._log('Message signed successfully');
 
     try {
-      const response = await this.fetchImpl(`${this.serverUrl}/auth/token`, {
+      const response = await this.fetchImpl(`${this.serverUrl}${this.authBasePath}/token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -554,7 +556,7 @@ export class BitcoinCashOAuthClient {
     if (serverCheck) {
       try {
         this._log('Token validation: checking with server');
-        const response = await this.fetchImpl(`${this.serverUrl}/auth/verify`, {
+        const response = await this.fetchImpl(`${this.serverUrl}${this.authBasePath}/verify`, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -634,7 +636,7 @@ export class BitcoinCashOAuthClient {
    */
   async refreshToken(refreshToken) {
     try {
-      const response = await this.fetchImpl(`${this.serverUrl}/auth/refresh`, {
+      const response = await this.fetchImpl(`${this.serverUrl}${this.authBasePath}/refresh`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -703,7 +705,7 @@ export class BitcoinCashOAuthClient {
         this.refreshTimer = null;
       }
       
-      const response = await this.fetchImpl(`${this.serverUrl}/auth/revoke`, {
+      const response = await this.fetchImpl(`${this.serverUrl}${this.authBasePath}/revoke`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

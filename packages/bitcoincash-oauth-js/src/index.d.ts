@@ -23,6 +23,8 @@ export interface OAuthClientOptions {
   serverUrl?: string;
   /** Network type - "mainnet" or "testnet" (default: "mainnet") */
   network?: 'mainnet' | 'testnet';
+  /** Base path for auth endpoints (default: "/auth") - e.g., "/auth" or "/bch-auth" */
+  authBasePath?: string;
   /** Storage interface for tokens */
   secureStorage?: SecureStorage;
   /** Custom fetch implementation (optional) */

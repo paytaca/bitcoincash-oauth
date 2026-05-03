@@ -102,10 +102,18 @@ const client = new BitcoinCashOAuthClient({
 const client = new BitcoinCashOAuthClient({
   serverUrl: 'http://localhost:8000',  // OAuth server URL
   network: 'mainnet',                  // 'mainnet' or 'testnet'
+  authBasePath: '/auth',               // Optional: base path for auth endpoints (default: '/auth')
   secureStorage: localStorage,         // Optional: storage for tokens
   fetch: customFetch                   // Optional: custom fetch implementation
 });
 ```
+
+**Options:**
+- `serverUrl` (string): The base URL of your OAuth server (default: `"http://localhost:8000"`)
+- `network` (string): Network type - `'mainnet'` or `'testnet'` (default: `'mainnet'`)
+- `authBasePath` (string): Base path for auth endpoints (default: `'/auth'`). Use `'/bch-auth'` for Watchtower API compatibility
+- `secureStorage` (object): Storage interface for tokens (e.g., `localStorage` in browser)
+- `fetch` (function): Custom fetch implementation (optional)
 
 ### Methods
 
