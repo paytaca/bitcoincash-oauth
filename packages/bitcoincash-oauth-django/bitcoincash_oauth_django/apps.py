@@ -17,6 +17,9 @@ class BitcoinCashOAuthConfig(AppConfig):
         # Import signal handlers
         from . import signals
 
+        # Import admin to register models with Django admin
+        from . import admin
+
         # Validate settings
         from .settings import check_settings
 
